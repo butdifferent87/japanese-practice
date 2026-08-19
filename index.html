@@ -142,11 +142,33 @@
   .note .pt { font-size: 12.5px; color: var(--muted); margin: 4px 0 0; }
   .extra { background: var(--accent-soft); border-radius: 11px; padding: 12px 14px; font-size: 13.5px; margin-top: 12px; }
   .empty { color: var(--muted); text-align: center; padding: 60px 0; }
+
+  /* ---- 코너 ---- */
+  .corners { display: flex; gap: 6px; }
+  .item.plain { grid-template-columns: 1fr; }
+  .search {
+    font: inherit; font-size: 14px; width: 100%;
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--stroke); border-radius: 11px;
+    padding: 10px 13px; margin-bottom: 14px;
+  }
+  .search:focus { outline: none; border-color: var(--accent); }
+  /* 꼭지 통번역 — 문장마다가 아니라 한 덩어리로 한 번 보여준다 */
+  .itemkr { font-size: 14px; color: var(--muted); background: var(--card);
+    border: 1px solid var(--stroke); border-radius: 11px; padding: 12px 14px; margin: 0 0 22px; }
+  body.hide-kr .itemkr { filter: blur(5px); opacity: .55; cursor: pointer; }
+  body.hide-kr .itemkr.reveal { filter: none; opacity: 1; }
+  .warn { font-size: 12.5px; color: var(--muted); border-left: 3px solid var(--accent);
+    padding: 6px 0 6px 12px; margin: 0 0 18px; }
 </style>
 </head>
 <body>
 <header>
   <h1>일본어 연습 아카이브</h1>
+  <nav class="corners">
+    <button id="cornerYt">유튜브 노트</button>
+    <button id="cornerNhk" hidden>NHK 듣기</button>
+  </nav>
   <span class="count" id="count"></span>
   <span class="spacer"></span>
   <button id="toggleFuri">후리가나</button>
@@ -156,6 +178,7 @@
 <main id="app"></main>
 
 <script src="data.js"></script>
+<!-- NHK 코너는 로컬에만 있다. 상용 교재라 공개 배포물에서는 deploy.sh 가 이 줄을 지운다. -->
 <script>
 const app = document.getElementById('app');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -204,7 +227,15 @@ audio.addEventListener('timeupdate', () => {
   if (loopOn() && curCue) { audio.currentTime = +curCue.dataset.start; return; }
   stopSeg();
 });
-audio.addEventListener('ended', stopSeg);
+audio.addEventListener('ended', () => {
+  // 문장마다 파일이 따로인 코너에서는 파일 끝 = 구간 끝이라 timeupdate 가 안 잡는다.
+  if (loopOn() && curCue) {
+    audio.currentTime = +curCue.dataset.start || 0;
+    audio.play().catch(stopSeg);
+    return;
+  }
+  stopSeg();
+});
 
 function stopSeg() {
   audio.pause();
@@ -213,19 +244,28 @@ function stopSeg() {
   curCue = null;
 }
 
+// 두 가지 음성 구조를 다 받는다:
+//   유튜브 노트 — 영상당 파일 하나 + 구간 오프셋(data-start/end)
+//   NHK 코너   — 문장마다 파일 하나(data-src), 파일 전체가 곧 그 문장
 function playSeg(cue) {
   if (curCue === cue) { stopSeg(); return; }   // 같은 구간 다시 누르면 정지
   stopSeg();
   curCue = cue;
-  stopAt = +cue.dataset.end;
+  const ownSrc = cue.dataset.src || '';
+  stopAt = ownSrc ? null : +cue.dataset.end;   // 제 파일이면 끝까지 = ended 가 맡는다
   cue.classList.add('playing');
   cue.querySelector('.pl').textContent = '■';
   // 메타데이터가 아직이면 currentTime 세팅이 무시돼 0초부터 재생된다. 로드를 기다린다.
   const go = () => {
     if (curCue !== cue) return;               // 기다리는 사이 다른 구간을 눌렀으면 버림
-    audio.currentTime = +cue.dataset.start;
+    audio.currentTime = +cue.dataset.start || 0;
     audio.play().catch(() => stopSeg());
   };
+  if (ownSrc && !audio.src.endsWith(ownSrc)) {
+    audio.src = ownSrc;                       // 소스가 바뀌면 readyState 가 0 으로 돌아간다
+    audio.addEventListener('loadedmetadata', go, { once: true });
+    return;
+  }
   audio.readyState >= 1 ? go() : audio.addEventListener('loadedmetadata', go, { once: true });
 }
 
@@ -331,6 +371,83 @@ function renderDetail(v) {
   });
 }
 
+// ---- NHK 코너 (로컬 전용) ----
+// nhk.js 가 없으면(=공개 배포본) 탭 자체가 안 뜬다.
+const NHK = typeof NHK_ITEMS !== 'undefined' ? NHK_ITEMS : [];
+let nhkQuery = '';
+
+function renderNhkList() {
+  const q = nhkQuery.trim();
+  const hits = q
+    ? NHK.map((it, i) => [it, i]).filter(([it]) =>
+        it.group.includes(q) || it.kr.includes(q) ||
+        it.cues.some(c => c.jp.replace(/\{([^|{}]+)\|[^|{}]+\}/g, '$1').includes(q)))
+    : NHK.map((it, i) => [it, i]);
+
+  app.innerHTML = `
+    <p class="warn">상용 교재(《NHK 뉴스 3단계 집중전략》) 산출물이라 이 코너는 이 맥에서만 열린다.
+      공개 사이트에는 올라가지 않는다.</p>
+    <input class="search" id="nhkQ" placeholder="꼭지 제목·일본어·번역 검색" value="${esc(q)}">
+    ${hits.length ? '<div class="grid">' + hits.map(([it, i]) => `
+      <div class="item plain" data-i="${i}">
+        <div>
+          <h2>${esc(it.group)}</h2>
+          <div class="meta"><span>문장 ${it.cues.length}개</span></div>
+          <p>${esc(it.kr.slice(0, 90))}${it.kr.length > 90 ? '…' : ''}</p>
+        </div>
+      </div>`).join('') + '</div>'
+      : '<p class="empty">검색 결과 없음.</p>'}`;
+
+  const input = document.getElementById('nhkQ');
+  input.oninput = () => {
+    nhkQuery = input.value;
+    const at = input.selectionStart;
+    renderNhkList();
+    const next = document.getElementById('nhkQ');
+    next.focus();
+    next.setSelectionRange(at, at);
+  };
+  app.querySelectorAll('.item').forEach(el =>
+    el.onclick = () => { location.hash = 'nhk/' + el.dataset.i; });
+}
+
+function renderNhkDetail(it, i) {
+  stopSeg();
+  app.innerHTML = `
+    <button class="back">← NHK 목록</button>
+    <div class="detail">
+      <h2>${esc(it.group)}</h2>
+      <div class="meta"><span>문장 ${it.cues.length}개</span><span>${i + 1} / ${NHK.length}</span></div>
+      <p class="hint"><b>일본어 문장을 누르면 그 문장만 재생.</b>
+        「반복」을 켜면 계속 되풀이한다. 번역이 가려져 있으면 클릭해서 확인.</p>
+      <p class="itemkr">${esc(it.kr)}</p>
+      ${it.cues.map(c => `
+        <div class="cue${c.src ? ' has-audio' : ''}" data-src="${esc(c.src ? 'raw/nhk/' + c.src : '')}">
+          ${c.src ? '<button class="pl" title="이 문장만 듣기">▶</button>' : ''}
+          <p class="jp">${ruby(c.jp)}</p>
+        </div>`).join('')}
+    </div>`;
+
+  app.querySelector('.back').onclick = () => { location.hash = 'nhk'; };
+  app.querySelector('.itemkr').onclick = e => e.currentTarget.classList.toggle('reveal');
+  app.querySelectorAll('.cue.has-audio').forEach(cue => {
+    cue.querySelector('.pl').onclick = () => playSeg(cue);
+    cue.querySelector('.jp').onclick = () => playSeg(cue);
+  });
+}
+
+// ---- 코너 전환 ----
+const cornerBtns = { yt: document.getElementById('cornerYt'), nhk: document.getElementById('cornerNhk') };
+cornerBtns.nhk.hidden = NHK.length === 0;
+cornerBtns.yt.onclick = () => { location.hash = ''; };
+cornerBtns.nhk.onclick = () => { location.hash = 'nhk'; };
+
+function setCorner(name) {
+  for (const [key, btn] of Object.entries(cornerBtns)) btn.classList.toggle('on', key === name);
+  document.getElementById('count').textContent =
+    name === 'nhk' ? NHK.length + '꼭지' : VIDEOS.length + '개';
+}
+
 // "2:25" → 145
 function hms(d) {
   const p = String(d).split(':').map(Number);
@@ -338,9 +455,18 @@ function hms(d) {
 }
 
 function route() {
-  const id = location.hash.slice(1);
-  const v = VIDEOS.find(x => x.id === id);
-  v ? renderDetail(v) : renderList();
+  const h = location.hash.slice(1);
+  stopSeg();                       // 코너를 옮기면 재생 중인 음성은 끊는다
+
+  if (h === 'nhk' || h.startsWith('nhk/')) {
+    setCorner('nhk');
+    const i = h.startsWith('nhk/') ? Number(h.slice(4)) : NaN;
+    NHK[i] ? renderNhkDetail(NHK[i], i) : renderNhkList();
+  } else {
+    setCorner('yt');
+    const v = VIDEOS.find(x => x.id === h);
+    v ? renderDetail(v) : renderList();
+  }
   scrollTo(0, 0);
 }
 addEventListener('hashchange', route);
