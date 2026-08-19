@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive, noimageindex">
+<title>일본어 연습 아카이브</title>
+<style>
+  :root {
+    --bg: #FAFAF8;
+    --card: #FFFFFF;
+    --text: #1A1A1A;
+    --muted: #5C7066;
+    --accent: #007050;
+    --accent-soft: rgba(0,112,80,.10);
+    --stroke: rgba(0,0,0,.08);
+    --shadow: 0 4px 14px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1A1A1A;
+      --card: #232323;
+      --text: #FDFCF8;
+      --muted: #9AA9A2;
+      --accent: #35B98D;
+      --accent-soft: rgba(53,185,141,.14);
+      --stroke: rgba(255,255,255,.09);
+      --shadow: 0 4px 18px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.6;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--stroke);
+    padding: 12px 20px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 700; letter-spacing: -.01em; }
+  header .count { color: var(--muted); font-size: 13px; }
+  .spacer { flex: 1; }
+  button {
+    font: inherit; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--stroke); background: var(--card); color: var(--text);
+    padding: 7px 13px; border-radius: 999px; cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  button:hover { border-color: var(--accent); }
+  button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  /* ---- 목록 ---- */
+  .grid { display: grid; gap: 12px; }
+  .item {
+    display: grid; grid-template-columns: 152px 1fr; gap: 14px;
+    background: var(--card); border: 1px solid var(--stroke); border-radius: 14px;
+    padding: 12px; cursor: pointer; box-shadow: var(--shadow);
+    transition: transform .12s, border-color .12s;
+  }
+  .item:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .item img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 9px; display: block; background: var(--accent-soft); }
+  .item h2 { margin: 2px 0 5px; font-size: 15px; font-weight: 700; }
+  .meta { color: var(--muted); font-size: 12.5px; }
+  .meta span + span::before { content: "·"; margin: 0 6px; }
+  .item p { margin: 7px 0 0; font-size: 13px; color: var(--muted); }
+  @media (max-width: 560px) { .item { grid-template-columns: 1fr; } }
+
+  /* ---- 상세 ---- */
+  .back { margin-bottom: 16px; }
+  .detail h2 { font-size: 22px; margin: 0 0 4px; letter-spacing: -.01em; }
+  /* 플레이어는 폭을 제한한다 — 전폭이면 자막이 화면 밖으로 밀림 */
+  .video, .noembed { max-width: 560px; }
+  .video { aspect-ratio: 16/9; width: 100%; border: 0; border-radius: 14px; margin: 16px 0 6px; background: #000; }
+
+  /* 임베드 차단 영상 폴백 */
+  .noembed {
+    position: relative; display: block; margin: 16px 0 6px;
+    border-radius: 14px; overflow: hidden; border: 1px solid var(--stroke);
+    text-decoration: none; color: #fff;
+  }
+  .noembed img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; filter: brightness(.55); }
+  .noembed .ov {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 20px;
+  }
+  .noembed .play {
+    width: 54px; height: 54px; border-radius: 50%; background: rgba(255,255,255,.92);
+    display: grid; place-items: center; color: #C00; font-size: 21px; padding-left: 4px;
+  }
+  .noembed b { font-size: 15px; }
+  .noembed small { font-size: 12.5px; opacity: .85; max-width: 420px; }
+  .noembed:hover img { filter: brightness(.4); }
+
+  .hint { font-size: 12.5px; color: var(--muted); margin: 0 0 22px; }
+  .cue { border-left: 3px solid var(--accent-soft); padding: 2px 0 2px 14px; margin: 0 0 18px; }
+  .cue:hover { border-left-color: var(--accent); }
+  .ts {
+    font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--accent); background: var(--accent-soft);
+    border: 0; padding: 4px 8px; border-radius: 6px; cursor: pointer; margin-bottom: 7px;
+  }
+  .jp { font-size: 16.5px; margin: 0 0 5px; }
+  .kr { font-size: 14px; color: var(--muted); margin: 0; }
+
+  /* 후리가나 — 끄면 rt 를 숨긴다 (텍스트는 그대로) */
+  ruby rt { font-size: .5em; color: var(--muted); font-weight: 400; }
+  body.no-furi ruby rt { display: none; }
+  /* 후리가나 켤 때 줄간격 확보 */
+  body:not(.no-furi) .jp { line-height: 2.1; }
+
+  /* 번역 가리기 */
+  body.hide-kr .kr { filter: blur(5px); opacity: .55; cursor: pointer; }
+  body.hide-kr .kr.reveal { filter: none; opacity: 1; }
+
+  /* 구간 재생 */
+  .cue.has-audio .jp { cursor: pointer; }
+  .cue.has-audio .jp:hover { background: var(--accent-soft); border-radius: 7px;
+    box-shadow: 0 0 0 6px var(--accent-soft); }
+  .cue.playing { position: relative; }
+  .cue.playing .jp { background: var(--accent-soft); border-radius: 7px;
+    box-shadow: 0 0 0 6px var(--accent-soft); }
+  .cue.playing .ts { background: var(--accent); color: #fff; }
+  .pl { border: 0; background: none; cursor: pointer; font-size: 13px; padding: 2px 5px;
+    color: var(--muted); border-radius: 6px; margin-left: 2px; }
+  .pl:hover { background: var(--accent-soft); color: var(--accent); }
+  .cue.playing .pl { color: var(--accent); }
+  .noaudio { font-size: 12.5px; color: var(--muted); }
+
+  h3 { font-size: 15px; margin: 34px 0 12px; padding-bottom: 7px; border-bottom: 1px solid var(--stroke); }
+  .notes { display: grid; gap: 9px; }
+  .note { background: var(--card); border: 1px solid var(--stroke); border-radius: 11px; padding: 11px 13px; }
+  .note b { font-size: 15.5px; }
+  .note .rd { color: var(--muted); font-size: 12.5px; margin-left: 6px; }
+  .note .mn { font-size: 14px; margin: 3px 0 0; }
+  .note .pt { font-size: 12.5px; color: var(--muted); margin: 4px 0 0; }
+  .extra { background: var(--accent-soft); border-radius: 11px; padding: 12px 14px; font-size: 13.5px; margin-top: 12px; }
+  .empty { color: var(--muted); text-align: center; padding: 60px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>일본어 연습 아카이브</h1>
+  <span class="count" id="count"></span>
+  <span class="spacer"></span>
+  <button id="toggleFuri">후리가나</button>
+  <button id="toggleKr">번역 가리기</button>
+  <button id="toggleLoop">반복</button>
+</header>
+<main id="app"></main>
+
+<script src="data.js"></script>
+<script>
+const app = document.getElementById('app');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// t 는 소수점 초(63.7 등)일 수 있다. 표시·유튜브 점프는 정수 초로 내린다.
+const mmss = t => Math.floor(t/60) + ':' + String(Math.floor(t%60)).padStart(2,'0');
+
+// {漢字|かんじ} → <ruby>漢字<rt>かんじ</rt></ruby>
+// rt 는 CSS 로 숨기므로, 후리가나를 꺼도 본문 글자는 그대로 남는다.
+const ruby = s => esc(s).replace(/\{([^|{}]+)\|([^|{}]+)\}/g,
+  (_, base, rd) => `<ruby>${base}<rt>${rd}</rt></ruby>`);
+
+document.getElementById('count').textContent = VIDEOS.length + '개';
+
+// ---- 토글 (설정은 localStorage 에 기억) ----
+function setupToggle(btnId, cls, key, onLabel, offLabel, defaultOn) {
+  const btn = document.getElementById(btnId);
+  const saved = localStorage.getItem(key);
+  const on = saved === null ? defaultOn : saved === '1';
+  document.body.classList.toggle(cls, !on);
+  const sync = () => {
+    const isOn = !document.body.classList.contains(cls);
+    btn.classList.toggle('on', isOn);
+    btn.textContent = isOn ? onLabel : offLabel;
+  };
+  btn.onclick = () => {
+    document.body.classList.toggle(cls);
+    localStorage.setItem(key, document.body.classList.contains(cls) ? '0' : '1');
+    sync();
+  };
+  sync();
+}
+setupToggle('toggleFuri', 'no-furi', 'furi', '후리가나 켬', '후리가나 끔', true);
+setupToggle('toggleKr', 'hide-kr', 'kr', '번역 보임', '번역 가림', true);
+setupToggle('toggleLoop', 'no-loop', 'loop', '반복 켬', '반복 끔', false);
+const loopOn = () => !document.body.classList.contains('no-loop');
+
+// ---- 구간 오디오 재생 ----
+// raw/audio/<id>.m4a 가 있으면 대사를 눌러 그 구간만 듣는다.
+// 파일을 지우면 재생 버튼이 자동으로 사라진다 (듣기 마스터 후 정리용).
+const audio = new Audio();
+audio.preload = 'metadata';
+let curCue = null, stopAt = null;
+
+audio.addEventListener('timeupdate', () => {
+  if (stopAt === null || audio.currentTime < stopAt) return;
+  if (loopOn() && curCue) { audio.currentTime = +curCue.dataset.start; return; }
+  stopSeg();
+});
+audio.addEventListener('ended', stopSeg);
+
+function stopSeg() {
+  audio.pause();
+  stopAt = null;
+  if (curCue) { curCue.classList.remove('playing'); curCue.querySelector('.pl').textContent = '▶'; }
+  curCue = null;
+}
+
+function playSeg(cue) {
+  if (curCue === cue) { stopSeg(); return; }   // 같은 구간 다시 누르면 정지
+  stopSeg();
+  curCue = cue;
+  stopAt = +cue.dataset.end;
+  cue.classList.add('playing');
+  cue.querySelector('.pl').textContent = '■';
+  // 메타데이터가 아직이면 currentTime 세팅이 무시돼 0초부터 재생된다. 로드를 기다린다.
+  const go = () => {
+    if (curCue !== cue) return;               // 기다리는 사이 다른 구간을 눌렀으면 버림
+    audio.currentTime = +cue.dataset.start;
+    audio.play().catch(() => stopSeg());
+  };
+  audio.readyState >= 1 ? go() : audio.addEventListener('loadedmetadata', go, { once: true });
+}
+
+function renderList() {
+  app.innerHTML = VIDEOS.length ? '<div class="grid">' + VIDEOS.map(v => `
+    <div class="item" data-id="${esc(v.id)}">
+      <img src="https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg" alt="" loading="lazy">
+      <div>
+        <h2>${esc(v.title)}</h2>
+        <div class="meta"><span>${esc(v.channel)}</span><span>${esc(v.duration)}</span><span>정리 ${esc(v.added)}</span></div>
+        <p>${esc(v.summary || '')}</p>
+      </div>
+    </div>`).join('') + '</div>'
+    : '<p class="empty">아직 영상 없음.</p>';
+  app.querySelectorAll('.item').forEach(el => el.onclick = () => { location.hash = el.dataset.id; });
+}
+
+function renderDetail(v) {
+  const embeddable = v.embed !== false;
+  const player = embeddable
+    ? `<iframe class="video" id="player"
+         src="https://www.youtube-nocookie.com/embed/${esc(v.id)}"
+         allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe>`
+    : `<a class="noembed" id="player" target="_blank" rel="noopener"
+          href="https://www.youtube.com/watch?v=${esc(v.id)}">
+         <img src="https://i.ytimg.com/vi/${esc(v.id)}/maxresdefault.jpg"
+              onerror="this.src='https://i.ytimg.com/vi/${esc(v.id)}/hqdefault.jpg'" alt="">
+         <span class="ov">
+           <span class="play">▶</span>
+           <b>YouTube에서 보기</b>
+           <small>이 영상은 소유자가 외부 사이트 재생을 막아뒀음. 타임스탬프를 누르면 유튜브의 해당 지점이 새 탭에서 열림.</small>
+         </span>
+       </a>`;
+
+  app.innerHTML = `
+    <button class="back">← 목록</button>
+    <div class="detail">
+      <h2>${esc(v.title)}</h2>
+      <div class="meta">
+        <span>${esc(v.channel)}</span><span>${esc(v.duration)}</span>
+        <span>업로드 ${esc(v.uploaded)}</span><span>자막: ${esc(v.subSource)}</span>
+      </div>
+      ${player}
+      <p class="hint">${embeddable
+        ? '타임스탬프를 누르면 그 지점부터 재생.'
+        : '타임스탬프를 누르면 유튜브의 그 지점이 새 탭에서 열림.'} 번역이 가려져 있으면 클릭해서 확인.</p>
+      ${v.cues.map((c, i) => `
+        <div class="cue" data-start="${c.t}" data-end="${c.e != null ? c.e : (v.cues[i + 1] ? v.cues[i + 1].t : hms(v.duration))}">
+          <button class="ts" data-t="${c.t}">${mmss(c.t)}</button><button class="pl" title="이 구간만 듣기">▶</button>
+          <p class="jp">${ruby(c.jp)}</p>
+          <p class="kr">${esc(c.kr)}</p>
+        </div>`).join('')}
+      <h3>표현 메모</h3>
+      <div class="notes">${v.notes.map(n => `
+        <div class="note">
+          <b>${esc(n.term)}</b>${n.reading ? `<span class="rd">${esc(n.reading)}</span>` : ''}
+          <p class="mn">${esc(n.meaning)}</p>
+          <p class="pt">${esc(n.point)}</p>
+        </div>`).join('')}
+      </div>
+      ${v.extra ? `<div class="extra">${esc(v.extra)}</div>` : ''}
+    </div>`;
+
+  app.querySelector('.back').onclick = () => { location.hash = ''; };
+  app.querySelectorAll('.ts').forEach(b => b.onclick = () => {
+    const t = Math.floor(+b.dataset.t);   // 유튜브는 정수 초만 받는다
+    if (embeddable) {
+      document.getElementById('player').src =
+        `https://www.youtube-nocookie.com/embed/${v.id}?start=${t}&autoplay=1`;
+    } else {
+      window.open(`https://www.youtube.com/watch?v=${v.id}&t=${t}s`, '_blank', 'noopener');
+    }
+  });
+  app.querySelectorAll('.kr').forEach(p => p.onclick = () => p.classList.toggle('reveal'));
+
+  // 오디오 파일이 있을 때만 구간 재생을 켠다. opus(24k) 우선, 없으면 m4a 폴백.
+  stopSeg();
+  const cands = [`raw/audio/${v.id}.opus`, `raw/audio/${v.id}.m4a`];
+  (async () => {
+    for (const c of cands) {
+      const r = await fetch(c, { method: 'HEAD' }).catch(() => null);
+      if (r && r.ok) return c;
+    }
+    throw 0;
+  })().then(src => {
+    audio.src = src;
+    app.querySelectorAll('.cue').forEach(cue => {
+      cue.classList.add('has-audio');
+      cue.querySelector('.pl').onclick = () => playSeg(cue);
+      cue.querySelector('.jp').onclick = () => playSeg(cue);
+    });
+    app.querySelector('.hint').insertAdjacentHTML('beforeend',
+      ' <b>일본어 문장을 누르면 그 구간만 재생.</b> 「반복」을 켜면 그 구간을 계속 되풀이한다.');
+  }).catch(() => {
+    app.querySelectorAll('.pl').forEach(b => b.remove());
+    app.querySelector('.hint').insertAdjacentHTML('beforeend',
+      ' <span class="noaudio">(음성 파일 없음 — 구간 재생 꺼짐)</span>');
+  });
+}
+
+// "2:25" → 145
+function hms(d) {
+  const p = String(d).split(':').map(Number);
+  return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1];
+}
+
+function route() {
+  const id = location.hash.slice(1);
+  const v = VIDEOS.find(x => x.id === id);
+  v ? renderDetail(v) : renderList();
+  scrollTo(0, 0);
+}
+addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
