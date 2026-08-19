@@ -160,6 +160,22 @@
   body.hide-kr .itemkr.reveal { filter: none; opacity: 1; }
   .warn { font-size: 12.5px; color: var(--muted); border-left: 3px solid var(--accent);
     padding: 6px 0 6px 12px; margin: 0 0 18px; }
+
+  /* ---- 완료 체크 ---- */
+  .rowtop { display: flex; align-items: flex-start; gap: 10px; }
+  .rowtop h2 { flex: 1; min-width: 0; }
+  .chk {
+    flex: none; width: 26px; height: 26px; padding: 0; border-radius: 8px;
+    display: grid; place-items: center; font-size: 14px; line-height: 1;
+    color: var(--muted); background: var(--card);
+  }
+  .chk.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .item.done { opacity: .62; }
+  .item.done h2 { text-decoration: line-through; text-decoration-thickness: 1px; }
+  .item.done:hover { opacity: 1; }
+  /* 상세 화면의 완료 버튼 */
+  .donebar { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; }
+  .donebar .note-sm { font-size: 12.5px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -190,7 +206,42 @@ const mmss = t => Math.floor(t/60) + ':' + String(Math.floor(t%60)).padStart(2,'
 const ruby = s => esc(s).replace(/\{([^|{}]+)\|([^|{}]+)\}/g,
   (_, base, rd) => `<ruby>${base}<rt>${rd}</rt></ruby>`);
 
-document.getElementById('count').textContent = VIDEOS.length + '개';
+// ---- 완료 표시 ----
+// 정적 사이트라 서버가 없다 → localStorage. 주소·기기마다 따로 쌓인다는 뜻이다
+// (맥 로컬과 폰의 공개본은 서로 모른다).
+// 키는 인덱스가 아니라 문자열 id 를 쓴다 — 데이터를 다시 임포트하면 순번이 밀려서
+// 인덱스로 잡아둔 완료 표시가 엉뚱한 꼭지로 옮겨간다.
+const DONE_KEY = 'done.v1';
+let doneMap = (() => {
+  try { return JSON.parse(localStorage.getItem(DONE_KEY)) || {}; } catch { return {}; }
+})();
+const doneOf = kind => (doneMap[kind] ||= {});
+const isDone = (kind, id) => !!doneOf(kind)[id];
+function setDone(kind, id, on) {
+  const bag = doneOf(kind);
+  if (on) bag[id] = 1; else delete bag[id];
+  localStorage.setItem(DONE_KEY, JSON.stringify(doneMap));
+}
+const doneCount = (kind, ids) => ids.reduce((n, id) => n + (isDone(kind, id) ? 1 : 0), 0);
+
+const checkBtn = (kind, id) =>
+  `<button class="chk${isDone(kind, id) ? ' on' : ''}" data-kind="${kind}" data-done-id="${esc(id)}"
+     title="완료 표시">✓</button>`;
+
+// 목록의 체크 버튼은 카드 클릭(=상세 진입)과 겹치므로 전파를 끊는다.
+function wireChecks(root, onChange) {
+  root.querySelectorAll('.chk').forEach(btn => {
+    btn.onclick = e => {
+      e.stopPropagation();
+      const { kind, doneId } = btn.dataset;
+      const next = !isDone(kind, doneId);
+      setDone(kind, doneId, next);
+      btn.classList.toggle('on', next);
+      btn.closest('.item')?.classList.toggle('done', next);
+      onChange && onChange();
+    };
+  });
+}
 
 // ---- 토글 (설정은 localStorage 에 기억) ----
 function setupToggle(btnId, cls, key, onLabel, offLabel, defaultOn) {
@@ -271,16 +322,31 @@ function playSeg(cue) {
 
 function renderList() {
   app.innerHTML = VIDEOS.length ? '<div class="grid">' + VIDEOS.map(v => `
-    <div class="item" data-id="${esc(v.id)}">
+    <div class="item${isDone('yt', v.id) ? ' done' : ''}" data-id="${esc(v.id)}">
       <img src="https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg" alt="" loading="lazy">
       <div>
-        <h2>${esc(v.title)}</h2>
+        <div class="rowtop"><h2>${esc(v.title)}</h2>${checkBtn('yt', v.id)}</div>
         <div class="meta"><span>${esc(v.channel)}</span><span>${esc(v.duration)}</span><span>정리 ${esc(v.added)}</span></div>
         <p>${esc(v.summary || '')}</p>
       </div>
     </div>`).join('') + '</div>'
     : '<p class="empty">아직 영상 없음.</p>';
   app.querySelectorAll('.item').forEach(el => el.onclick = () => { location.hash = el.dataset.id; });
+  wireChecks(app, () => updateCount('yt'));
+}
+
+// 상세 화면 하단의 완료 버튼. 목록으로 안 나가고 그 자리에서 표시할 수 있게.
+function doneBar(kind, id, label) {
+  return `<div class="donebar">
+    ${checkBtn(kind, id)}
+    <span class="note-sm" id="doneLabel">${isDone(kind, id) ? '완료함' : label}</span>
+  </div>`;
+}
+function wireDoneBar(kind, id, label) {
+  wireChecks(app.querySelector('.donebar'), () => {
+    document.getElementById('doneLabel').textContent = isDone(kind, id) ? '완료함' : label;
+    updateCount(kind);
+  });
 }
 
 function renderDetail(v) {
@@ -327,8 +393,10 @@ function renderDetail(v) {
         </div>`).join('')}
       </div>
       ${v.extra ? `<div class="extra">${esc(v.extra)}</div>` : ''}
+      ${doneBar('yt', v.id, '이 영상 완료로 표시')}
     </div>`;
 
+  wireDoneBar('yt', v.id, '이 영상 완료로 표시');
   app.querySelector('.back').onclick = () => { location.hash = ''; };
   app.querySelectorAll('.ts').forEach(b => b.onclick = () => {
     const t = Math.floor(+b.dataset.t);   // 유튜브는 정수 초만 받는다
@@ -375,28 +443,40 @@ function renderDetail(v) {
 // nhk.js 가 없으면(=공개 배포본) 탭 자체가 안 뜬다.
 const NHK = typeof NHK_ITEMS !== 'undefined' ? NHK_ITEMS : [];
 let nhkQuery = '';
+let hideDone = localStorage.getItem('hideDone') === '1';
 
 function renderNhkList() {
   const q = nhkQuery.trim();
-  const hits = q
-    ? NHK.map((it, i) => [it, i]).filter(([it]) =>
-        it.group.includes(q) || it.kr.includes(q) ||
-        it.cues.some(c => c.jp.replace(/\{([^|{}]+)\|[^|{}]+\}/g, '$1').includes(q)))
-    : NHK.map((it, i) => [it, i]);
+  let hits = NHK.map((it, i) => [it, i]);
+  if (q) hits = hits.filter(([it]) =>
+    it.group.includes(q) || it.kr.includes(q) ||
+    it.cues.some(c => c.jp.replace(/\{([^|{}]+)\|[^|{}]+\}/g, '$1').includes(q)));
+  if (hideDone) hits = hits.filter(([it]) => !isDone('nhk', it.group));
 
   app.innerHTML = `
     <p class="warn">상용 교재(《NHK 뉴스 3단계 집중전략》) 산출물이라 이 코너는 이 맥에서만 열린다.
       공개 사이트에는 올라가지 않는다.</p>
     <input class="search" id="nhkQ" placeholder="꼭지 제목·일본어·번역 검색" value="${esc(q)}">
+    <div class="donebar" style="margin:0 0 14px">
+      <button id="hideDone" class="${hideDone ? 'on' : ''}">미완료만</button>
+      <span class="note-sm">${hits.length}꼭지 표시 중</span>
+    </div>
     ${hits.length ? '<div class="grid">' + hits.map(([it, i]) => `
-      <div class="item plain" data-i="${i}">
+      <div class="item plain${isDone('nhk', it.group) ? ' done' : ''}" data-i="${i}">
         <div>
-          <h2>${esc(it.group)}</h2>
+          <div class="rowtop"><h2>${esc(it.group)}</h2>${checkBtn('nhk', it.group)}</div>
           <div class="meta"><span>문장 ${it.cues.length}개</span></div>
           <p>${esc(it.kr.slice(0, 90))}${it.kr.length > 90 ? '…' : ''}</p>
         </div>
       </div>`).join('') + '</div>'
-      : '<p class="empty">검색 결과 없음.</p>'}`;
+      : `<p class="empty">${hideDone && !q ? '전부 완료했다. 👏' : '검색 결과 없음.'}</p>`}`;
+
+  document.getElementById('hideDone').onclick = () => {
+    hideDone = !hideDone;
+    localStorage.setItem('hideDone', hideDone ? '1' : '0');
+    renderNhkList();
+  };
+  wireChecks(app, () => updateCount('nhk'));
 
   const input = document.getElementById('nhkQ');
   input.oninput = () => {
@@ -426,8 +506,10 @@ function renderNhkDetail(it, i) {
           ${c.src ? '<button class="pl" title="이 문장만 듣기">▶</button>' : ''}
           <p class="jp">${ruby(c.jp)}</p>
         </div>`).join('')}
+      ${doneBar('nhk', it.group, '이 꼭지 완료로 표시')}
     </div>`;
 
+  wireDoneBar('nhk', it.group, '이 꼭지 완료로 표시');
   app.querySelector('.back').onclick = () => { location.hash = 'nhk'; };
   app.querySelector('.itemkr').onclick = e => e.currentTarget.classList.toggle('reveal');
   app.querySelectorAll('.cue.has-audio').forEach(cue => {
@@ -444,8 +526,18 @@ cornerBtns.nhk.onclick = () => { location.hash = 'nhk'; };
 
 function setCorner(name) {
   for (const [key, btn] of Object.entries(cornerBtns)) btn.classList.toggle('on', key === name);
-  document.getElementById('count').textContent =
-    name === 'nhk' ? NHK.length + '꼭지' : VIDEOS.length + '개';
+  updateCount(name);
+}
+
+function updateCount(name) {
+  const el = document.getElementById('count');
+  if (name === 'nhk') {
+    const done = doneCount('nhk', NHK.map(i => i.group));
+    el.textContent = `${NHK.length}꼭지 · 완료 ${done}`;
+  } else {
+    const done = doneCount('yt', VIDEOS.map(v => v.id));
+    el.textContent = `${VIDEOS.length}개 · 완료 ${done}`;
+  }
 }
 
 // "2:25" → 145
