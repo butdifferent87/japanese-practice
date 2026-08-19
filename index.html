@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow, noarchive, noimageindex">
 <title>일본어 연습 아카이브</title>
 <style>
   :root {
@@ -303,8 +302,13 @@ function renderDetail(v) {
   app.querySelectorAll('.kr').forEach(p => p.onclick = () => p.classList.toggle('reveal'));
 
   // 오디오 파일이 있을 때만 구간 재생을 켠다. opus(24k) 우선, 없으면 m4a 폴백.
+  // 존재 여부만 보면 안 된다 — 사파리가 opus를 못 읽는 경우 파일은 받아지는데
+  // 재생만 조용히 실패한다. 브라우저가 디코드 가능하다고 말한 것만 후보로 둔다.
   stopSeg();
-  const cands = [`raw/audio/${v.id}.opus`, `raw/audio/${v.id}.m4a`];
+  const cands = [
+    ['audio/ogg; codecs=opus', `raw/audio/${v.id}.opus`],
+    ['audio/mp4; codecs=mp4a.40.2', `raw/audio/${v.id}.m4a`],
+  ].filter(([type]) => audio.canPlayType(type) !== '').map(([, url]) => url);
   (async () => {
     for (const c of cands) {
       const r = await fetch(c, { method: 'HEAD' }).catch(() => null);
