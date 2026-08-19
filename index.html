@@ -176,6 +176,29 @@
   /* 상세 화면의 완료 버튼 */
   .donebar { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; }
   .donebar .note-sm { font-size: 12.5px; color: var(--muted); }
+
+  /* ---- 동기화 패널 ---- */
+  #syncPanel {
+    position: fixed; inset: 0; z-index: 20; padding: 20px;
+    background: rgba(0,0,0,.55); display: grid; place-items: center;
+  }
+  #syncPanel[hidden] { display: none; }
+  .sync-card {
+    background: var(--card); border: 1px solid var(--stroke); border-radius: 16px;
+    padding: 20px; max-width: 520px; width: 100%; box-shadow: var(--shadow);
+    max-height: 90vh; overflow: auto;
+  }
+  .sync-card h3 { margin: 0 0 10px; border: 0; padding: 0; font-size: 17px; }
+  .sync-card p { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+  .sync-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .note-sm { font-size: 12.5px; color: var(--muted); }
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 30;
+    background: var(--accent); color: #fff; font-size: 13.5px; font-weight: 600;
+    padding: 10px 16px; border-radius: 999px; box-shadow: var(--shadow);
+  }
+  #syncIn { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    resize: vertical; }
 </style>
 </head>
 <body>
@@ -190,7 +213,28 @@
   <button id="toggleFuri">후리가나</button>
   <button id="toggleKr">번역 가리기</button>
   <button id="toggleLoop">반복</button>
+  <button id="openSync">동기화</button>
 </header>
+<div id="syncPanel" hidden>
+  <div class="sync-card">
+    <h3>완료 상태 동기화</h3>
+    <p>기기끼리 <b>합친다</b> — 덮어쓰지 않는다. 항목마다 더 최근에 누른 쪽이 이긴다.
+      방향은 상관없고, 같은 코드를 두 번 넣어도 결과는 같다.</p>
+    <div class="sync-row">
+      <button id="copySync">이 기기 상태 복사</button>
+      <span class="note-sm" id="copyMsg"></span>
+    </div>
+    <textarea id="syncIn" class="search" rows="3"
+      placeholder="다른 기기에서 복사한 코드를 여기 붙여넣기"></textarea>
+    <div class="sync-row">
+      <button id="applySync">합치기</button>
+      <span class="note-sm" id="applyMsg"></span>
+    </div>
+    <p class="note-sm">아이폰↔맥은 복사하면 반대쪽에서 그냥 붙여넣기가 된다(유니버설 클립보드).
+      안 되면 메모·메시지로 자신에게 보내도 된다.</p>
+    <div class="sync-row"><button id="closeSync">닫기</button></div>
+  </div>
+</div>
 <main id="app"></main>
 
 <script src="data.js"></script>
@@ -211,18 +255,71 @@ const ruby = s => esc(s).replace(/\{([^|{}]+)\|([^|{}]+)\}/g,
 // (맥 로컬과 폰의 공개본은 서로 모른다).
 // 키는 인덱스가 아니라 문자열 id 를 쓴다 — 데이터를 다시 임포트하면 순번이 밀려서
 // 인덱스로 잡아둔 완료 표시가 엉뚱한 꼭지로 옮겨간다.
+// 값은 불린이 아니라 **시각**이다: 양수 = 그때 완료, 음수 = 그때 완료 해제.
+// 기기 간 병합에 필요하다 — 어느 쪽이 최신인지 알아야 "한쪽에서 지운 것"과
+// "다른 쪽에서 아직 안 받은 것"을 구분할 수 있다. 불린이면 구분이 불가능해
+// 합칠 때마다 지운 게 되살아난다.
 const DONE_KEY = 'done.v1';
 let doneMap = (() => {
   try { return JSON.parse(localStorage.getItem(DONE_KEY)) || {}; } catch { return {}; }
 })();
 const doneOf = kind => (doneMap[kind] ||= {});
-const isDone = (kind, id) => !!doneOf(kind)[id];
+const isDone = (kind, id) => (doneOf(kind)[id] || 0) > 0;
+function saveDone() { localStorage.setItem(DONE_KEY, JSON.stringify(doneMap)); }
 function setDone(kind, id, on) {
-  const bag = doneOf(kind);
-  if (on) bag[id] = 1; else delete bag[id];
-  localStorage.setItem(DONE_KEY, JSON.stringify(doneMap));
+  doneOf(kind)[id] = on ? Date.now() : -Date.now();
+  saveDone();
 }
 const doneCount = (kind, ids) => ids.reduce((n, id) => n + (isDone(kind, id) ? 1 : 0), 0);
+
+// ---- 기기 간 동기화 (수동) ----
+// 서버가 없으니 상태를 코드로 만들어 손으로 옮긴다. 아이폰↔맥은 유니버설
+// 클립보드가 붙여넣기까지 알아서 넘겨준다.
+//
+// 병합은 **항목별로 시각이 큰 쪽**을 고른다. 그래서 방향이 상관없고, 같은 코드를
+// 두 번 넣어도 결과가 같다. 한쪽에서만 체크한 것은 그대로 살아남는다.
+const b64e = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
+  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64d = s => Uint8Array.from(
+  atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+
+async function exportState() {
+  const json = new TextEncoder().encode(JSON.stringify(doneMap));
+  // 완료가 쌓이면 코드가 길어진다. 압축이 있으면 쓰고, 없으면 그냥 보낸다.
+  if (typeof CompressionStream === 'undefined') return 'r' + b64e(json);
+  const cs = new CompressionStream('deflate-raw');
+  const w = cs.writable.getWriter(); w.write(json); w.close();
+  return 'z' + b64e(await new Response(cs.readable).arrayBuffer());
+}
+
+async function decodeState(code) {
+  const body = code.trim().replace(/^.*#sync=/, '');
+  const bytes = b64d(body.slice(1));
+  if (body[0] === 'r') return JSON.parse(new TextDecoder().decode(bytes));
+  const ds = new DecompressionStream('deflate-raw');
+  const w = ds.writable.getWriter(); w.write(bytes); w.close();
+  return JSON.parse(new TextDecoder().decode(await new Response(ds.readable).arrayBuffer()));
+}
+
+function mergeState(incoming) {
+  let changed = 0;
+  for (const kind of Object.keys(incoming)) {
+    const mine = doneOf(kind), theirs = incoming[kind] || {};
+    for (const [id, ts] of Object.entries(theirs)) {
+      if (typeof ts !== 'number') continue;
+      const cur = mine[id] || 0;
+      if (Math.abs(ts) > Math.abs(cur)) { mine[id] = ts; changed++; }
+    }
+  }
+  if (changed) saveDone();
+  return changed;
+}
+
+async function syncLink() {
+  // 코드를 해시 조각에 싣는다 — 해시는 서버로 전송되지 않는다.
+  const base = location.origin + location.pathname;
+  return `${base}#sync=${await exportState()}`;
+}
 
 const checkBtn = (kind, id) =>
   `<button class="chk${isDone(kind, id) ? ' on' : ''}" data-kind="${kind}" data-done-id="${esc(id)}"
@@ -540,6 +637,71 @@ function updateCount(name) {
   }
 }
 
+// ---- 동기화 패널 배선 ----
+const syncPanel = document.getElementById('syncPanel');
+function toast(text) {
+  document.querySelector('.toast')?.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+const msg = (id, text) => {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 4000);
+};
+
+document.getElementById('openSync').onclick = () => {
+  syncPanel.hidden = false;
+  document.getElementById('syncIn').value = '';
+};
+document.getElementById('closeSync').onclick = () => { syncPanel.hidden = true; };
+syncPanel.onclick = e => { if (e.target === syncPanel) syncPanel.hidden = true; };
+
+document.getElementById('copySync').onclick = async () => {
+  const link = await syncLink();
+  try {
+    await navigator.clipboard.writeText(link);
+    msg('copyMsg', '복사됨 — 다른 기기에 붙여넣기');
+  } catch {
+    // 클립보드 권한이 막힌 경우: 직접 고를 수 있게 넣어준다
+    const box = document.getElementById('syncIn');
+    box.value = link; box.select();
+    msg('copyMsg', '자동 복사 실패 — 아래 칸에서 직접 복사');
+  }
+};
+
+document.getElementById('applySync').onclick = async () => {
+  const code = document.getElementById('syncIn').value.trim();
+  if (!code) return msg('applyMsg', '붙여넣은 코드가 없다');
+  try {
+    const n = mergeState(await decodeState(code));
+    msg('applyMsg', n ? `${n}개 반영됨` : '새로 반영할 게 없다 (이미 같음)');
+    route();
+  } catch {
+    msg('applyMsg', '코드를 읽을 수 없다 — 전체를 복사했는지 확인');
+  }
+};
+
+// 링크로 받은 경우: 열자마자 합치고 해시는 지운다(새로고침 때 또 적용되지 않게).
+async function consumeSyncHash() {
+  const h = location.hash.slice(1);
+  if (!h.startsWith('sync=')) return false;
+  try {
+    const n = mergeState(await decodeState(h.slice(5)));
+    history.replaceState(null, '', location.pathname + location.search);
+    route();   // replaceState 는 hashchange 를 안 쏜다 — 직접 다시 그린다
+    toast(n ? `동기화 완료 — ${n}개 반영됨` : '동기화 완료 — 이미 최신');
+  } catch {
+    history.replaceState(null, '', location.pathname + location.search);
+    route();   // replaceState 는 hashchange 를 안 쏜다 — 직접 다시 그린다
+    toast('동기화 코드를 읽을 수 없다');
+  }
+  return true;
+}
+
 // "2:25" → 145
 function hms(d) {
   const p = String(d).split(':').map(Number);
@@ -549,6 +711,9 @@ function hms(d) {
 function route() {
   const h = location.hash.slice(1);
   stopSeg();                       // 코너를 옮기면 재생 중인 음성은 끊는다
+
+  // 동기화 링크로 들어온 경우. 해시를 지우고 나면 hashchange 가 다시 route 를 부른다.
+  if (h.startsWith('sync=')) { consumeSyncHash(); return; }
 
   // NHK 데이터가 없는 빌드(=공개본)에서는 그 코너가 존재하지 않는 것처럼 군다.
   // 빈 목록과 교재 안내문을 공개 페이지에 남길 이유가 없다.
