@@ -637,6 +637,18 @@ function updateCount(name) {
   }
 }
 
+// 완료 표시는 **주소마다** 따로 쌓인다(브라우저가 origin 단위로 저장하기 때문).
+// 같은 맥·같은 서버라도 localhost 와 xxx.local 은 서로의 진도를 모른다.
+// 조용히 갈리면 알아채기 어려우니, 기준 주소가 아닐 때 한 번 알려준다.
+function warnIfSplitStorage() {
+  const CANON = ['localhost', '127.0.0.1'];
+  const isLocalServer = location.port === '8899';
+  if (!isLocalServer || CANON.includes(location.hostname)) return;
+  if (sessionStorage.getItem('originWarned')) return;
+  sessionStorage.setItem('originWarned', '1');
+  toast('이 주소는 진도가 따로 쌓인다 — 맥에서는 localhost:8899 로 볼 것');
+}
+
 // ---- 동기화 패널 배선 ----
 const syncPanel = document.getElementById('syncPanel');
 function toast(text) {
@@ -730,6 +742,7 @@ function route() {
 }
 addEventListener('hashchange', route);
 route();
+warnIfSplitStorage();
 </script>
 </body>
 </html>
