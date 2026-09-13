@@ -116,7 +116,14 @@
   body:not(.no-furi) .jp { line-height: 2.1; }
 
   /* ---- 회화 노트 ---- */
-  .jump { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 8px; }
+  /* 칩 줄: 헤더 아래 고정 · 한 줄로 가로 스와이프 (top 은 JS 가 헤더 높이로 맞춘다) */
+  .jump { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; margin: 12px -20px 8px;
+    padding: 8px 20px; position: sticky; z-index: 5; background: var(--bg);
+    border-bottom: 1px solid var(--stroke); scrollbar-width: none; }
+  .jump::-webkit-scrollbar { display: none; }
+  .jump button { flex: 0 0 auto; }
+  .call-panel > h3.call-sec[id] { display: none; }   /* 칩이 곧 제목이라 겹치는 제목은 숨긴다 */
+  .call-panel { min-height: 60vh; }
   .call-sec { margin: 30px 0 12px; font-size: 16.5px; scroll-margin-top: 96px; }
   .fix { background: var(--card); border: 1px solid var(--stroke); border-radius: 11px;
     padding: 11px 13px; margin: 0 0 10px; }
@@ -1925,8 +1932,37 @@ function renderCallDetail(c) {
   wireDoneBar('calls', c.id, '이 회화 복습 완료로 표시');
   wireCallClips(c);
   app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
-  app.querySelectorAll('[data-go]').forEach(b => b.onclick = () =>
-    document.getElementById(b.dataset.go).scrollIntoView({ behavior: 'smooth' }));
+  // ---- 칩 = 탭 ----
+  // 칩을 누르면 스크롤로 이동하지 않고 그 칸만 보여준다(유저: "스크롤이 느려서 답답"). 칸 나누기는 그린 뒤에
+  // DOM 으로 한다 — 제목(h3.call-sec[id])마다 새 칸, 그 앞의 🔁 반복 실수는 ✏️ 칸에 붙인다.
+  const detail = app.querySelector('.detail');
+  const jump = detail.querySelector('.jump');
+  const panels = {};
+  let cur = 'sec-fix';
+  for (const el of [...detail.children]) {
+    if (el === jump || el.matches('h2, .meta, .donebar')) continue;
+    if (el.matches('h3.call-sec[id]')) cur = el.id;
+    if (!panels[cur]) { panels[cur] = document.createElement('section'); panels[cur].className = 'call-panel'; }
+    panels[cur].append(el);
+  }
+  const order = secs.map(([id]) => id).filter(id => panels[id]);
+  let anchor = jump;
+  for (const id of order) { anchor.after(panels[id]); anchor = panels[id]; }
+  const bar = detail.querySelector('.donebar');
+  if (bar) anchor.after(bar);
+  // 칩 줄은 헤더 바로 아래에 붙어 있게(스크롤해도 칩을 누를 수 있게)
+  jump.style.top = document.querySelector('header').offsetHeight + 'px';
+  const showTab = (id) => {
+    for (const [k, p] of Object.entries(panels)) p.hidden = k !== id;
+    jump.querySelectorAll('[data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === id));
+    localStorage.setItem('callsTab', id);
+    // 칩 줄 아래로 내려가 있었다면 칸의 맨 위가 보이게 즉시 올린다
+    const top = jump.getBoundingClientRect().top + scrollY - parseFloat(jump.style.top);
+    if (scrollY > top) scrollTo(0, top);
+  };
+  jump.querySelectorAll('[data-go]').forEach(b => b.onclick = () => showTab(b.dataset.go));
+  const saved = localStorage.getItem('callsTab');
+  showTab(panels[saved] ? saved : order[0]);
   app.querySelectorAll('.kr').forEach(p => p.onclick = () => p.classList.toggle('reveal'));
 }
 
