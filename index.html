@@ -1680,9 +1680,23 @@ function hl(full, frag, cls) {
 // 아이폰 사파리는 "누른 순간"에 play() 해야 소리를 낸다. 누른 뒤에 받고 풀면 그 순간이 지나가서
 // 막힌다 — 그래서 상세 화면을 여는 즉시 미리 받아 풀어두고, 준비되면 버튼을 켠다.
 let CALLS_PASS = null;          // 공개본에서 글을 푼 암호. 음성 잠금본도 같은 암호로 연다
-const callAudio = new Audio();
 const callClipUrls = {};         // `${통화id}/${clipKey}` → 재생 주소
-addEventListener('hashchange', () => callAudio.pause());
+// 조각마다 재생기를 따로 만들어 미리 읽어둔다. 재생기 하나에 누를 때마다 src 를 바꾸면
+// 그때부터 파일을 읽고 해독해서 누른 뒤 한참 있다가 소리가 난다(특히 아이폰).
+const callPlayers = {};          // 같은 키 → <audio>
+let callPlaying = null;
+const stopCallAudio = () => { if (callPlaying) { callPlaying.pause(); callPlaying = null; } };
+addEventListener('hashchange', stopCallAudio);
+function callPlayer(k) {
+  if (!callPlayers[k]) {
+    const a = new Audio();
+    a.preload = 'auto';
+    a.src = callClipUrls[k];
+    a.load();
+    callPlayers[k] = a;
+  }
+  return callPlayers[k];
+}
 
 async function prepareCallAudio(c) {
   // 📥 가져다 쓸 표현 + ✏️ 카드 속 「상대:」 줄
@@ -1706,18 +1720,22 @@ function wireCallClips(c) {
   const els = app.querySelectorAll('[data-clip]');
   if (!els.length) return;
   const play = (el) => {
-    const url = callClipUrls[`${c.id}/${el.dataset.clip}`];
-    if (!url) return;
+    const k = `${c.id}/${el.dataset.clip}`;
+    if (!callClipUrls[k]) return;
     const card = el.closest('.fix');
+    stopCallAudio();
     app.querySelectorAll('.fix.playing').forEach(x => x.classList.remove('playing'));
     card?.classList.add('playing');
-    callAudio.src = url;
-    callAudio.currentTime = 0;
-    callAudio.play().catch(() => card?.classList.remove('playing'));
-    callAudio.onended = () => card?.classList.remove('playing');
+    const a = callPlayer(k);
+    a.currentTime = 0;
+    callPlaying = a;
+    a.play().catch(() => card?.classList.remove('playing'));
+    a.onended = () => card?.classList.remove('playing');
   };
   prepareCallAudio(c).then(ok => {
     if (!ok) return;
+    // 화면에 있는 조각들을 미리 읽어둔다 — 누르는 순간 바로 나오게
+    new Set([...els].map(el => `${c.id}/${el.dataset.clip}`)).forEach(k => callClipUrls[k] && callPlayer(k));
     els.forEach(el => {
       el.classList.add('playable');
       if (el.matches('.clip-btn')) el.disabled = false;
