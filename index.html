@@ -139,6 +139,11 @@
   .stat b { display: block; font-size: 17px; }
   .stat small { color: var(--muted); }
   .fix .lbl { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; font-weight: 600; }
+  .fix .wanted { font-size: 14px; margin: 2px 0 0; }
+  .keys { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+  .key { font-size: 13px; background: var(--accent-soft); border-radius: 999px; padding: 3px 11px; }
+  .key b { font-size: 14.5px; margin-right: 3px; }
+  body:not(.no-furi) .key b { line-height: 1.9; }
   .fix .said-full { color: var(--muted); }
   .fix .bad { text-decoration: underline wavy rgba(210,70,70,.75); text-underline-offset: 5px; color: var(--text); }
   .fix .good { background: var(--accent-soft); border-radius: 5px; padding: 0 2px; }
@@ -1700,7 +1705,7 @@ function callPlayer(k) {
 
 async function prepareCallAudio(c) {
   // 📥 가져다 쓸 표현 + ✏️ 카드 속 「상대:」 줄
-  const clips = [...c.steal, ...c.fixes.map(f => f.ctx).filter(Boolean)].filter(s => s.clipKey);
+  const clips = [...c.steal, ...(c.missed || []), ...c.fixes.map(f => f.ctx).filter(Boolean)].filter(s => s.clipKey);
   if (!clips.length) return false;
   if (typeof CALLS_DATA !== 'undefined') {           // 로컬: 파일이 옆에 있다
     clips.forEach(s => { callClipUrls[`${c.id}/${s.clipKey}`] = s.clip; });
@@ -1780,7 +1785,7 @@ function renderCallsList() {
       <div>
         <div class="rowtop"><h2>${esc(c.title)}</h2>${checkBtn('calls', c.id)}</div>
         <div class="meta"><span>${esc(c.date)}</span><span>${esc(c.duration)}</span><span>${esc(c.with || '')}</span></div>
-        <p>고칠 표현 ${c.fixes.length} · 가져다 쓸 표현 ${c.steal.length} · 새 단어 ${c.vocab.length}</p>
+        <p>고칠 표현 ${c.fixes.length}${c.stuck ? ` · 막힌 순간 ${c.stuck.length}` : ''}${c.missed ? ` · 못 알아들은 순간 ${c.missed.length}` : ''} · 가져다 쓸 표현 ${c.steal.length} · 새 단어 ${c.vocab.length}</p>
       </div>
     </div>`).join('') + '</div>'
     : '<p class="empty">아직 회화 노트 없음.</p>';
@@ -1793,21 +1798,28 @@ function renderCallDetail(c) {
   const fixes = [...c.fixes].sort(byT);
   // 카드마다 「확인함」 체크. 키는 원래 배열의 순번이다 — 화면은 시각순으로 정렬해 그리지만
   // 데이터 파일의 순서는 그대로라 순번이 흔들리지 않는다. 기기 간 동기화도 기존 완료 표시와 같이 된다.
-  const arr = { fix: c.fixes, steal: c.steal, good: c.good };
+  const stuck = [...(c.stuck || [])].sort(byT), missed = [...(c.missed || [])].sort(byT);
+  const arr = { fix: c.fixes, steal: c.steal, good: c.good, stuck: c.stuck || [], missed: c.missed || [] };
   const itemId = (sec, it) => `${c.id}:${sec}:${arr[sec].indexOf(it)}`;
   const seen = sec => arr[sec].filter(it => isDone('callsItem', itemId(sec, it))).length;
   const secLabel = {
     fix: () => `✏️ 고칠 표현 ${seen('fix')}/${c.fixes.length}`,
+    stuck: () => `🧱 막힌 순간 ${seen('stuck')}/${arr.stuck.length}`,
+    missed: () => `👂 못 알아들은 순간 ${seen('missed')}/${arr.missed.length}`,
     steal: () => `📥 가져다 쓸 표현 ${seen('steal')}/${c.steal.length}`,
     good: () => `👍 잘한 점 ${seen('good')}/${c.good.length}`,
   };
   const secs = [
     ['sec-fix', secLabel.fix()],
+    ...(arr.stuck.length ? [['sec-stuck', secLabel.stuck()]] : []),
+    ...(arr.missed.length ? [['sec-missed', secLabel.missed()]] : []),
     ['sec-steal', secLabel.steal()],
     ['sec-good', secLabel.good()],
     ['sec-vocab', `📖 새 단어 ${c.vocab.length}`],
     ['sec-stats', '📊 말버릇'],
   ];
+  const keys = ks => ks && ks.length
+    ? `<div class="keys">${ks.map(k => `<span class="key"><b class="jp">${ruby(k.jp)}</b> ${esc(k.kr || '')}</span>`).join('')}</div>` : '';
   app.innerHTML = `
     <button class="back">← 회화 목록</button>
     <div class="detail">
@@ -1833,6 +1845,38 @@ function renderCallDetail(c) {
           ${f.kr ? `<p class="kr">${esc(f.kr)}</p>` : ''}
           <p class="why">${esc(f.why)}</p>
         </div>`).join('')}
+
+      ${stuck.length ? `
+      <h3 class="call-sec" id="sec-stuck">🧱 막힌 순간</h3>
+      <p class="hint">말하려다 막힌 곳. 그때 떠올리지 못한 말이 아래 칩에 있다.</p>
+      ${stuck.map(s => `
+        <div class="fix${isDone('callsItem', itemId('stuck', s)) ? ' done' : ''}">
+          <div class="fix-top"><span class="tsx">${esc(s.t)}</span><span class="tag">${esc(s.signal || '')}</span>
+            ${checkBtn('callsItem', itemId('stuck', s))}</div>
+          ${s.ctx ? `<p class="ctx">상대: <span class="jp">${ruby(s.ctx.jp)}</span><span class="ctx-kr">${esc(s.ctx.kr || '')}</span></p>` : ''}
+          <p class="lbl">하려던 말</p>
+          <p class="wanted">${esc(s.wanted || '')}</p>
+          <p class="lbl">실제로 한 말</p>
+          <p class="jp said-full">${ruby(s.said_full || '')}</p>
+          <p class="lbl">이렇게 말하면 됨</p>
+          <p class="jp nat">${ruby(s.natural_full || '')}</p>
+          ${s.kr ? `<p class="kr">${esc(s.kr)}</p>` : ''}
+          ${keys(s.key)}
+        </div>`).join('')}` : ''}
+
+      ${missed.length ? `
+      <h3 class="call-sec" id="sec-missed">👂 못 알아들은 순간</h3>
+      <p class="hint">상대 말을 놓친 곳. 「번역 가리기」를 켜고 ▶로 먼저 들어본 뒤 뜻을 확인해보자.</p>
+      ${missed.map(m => `
+        <div class="fix${isDone('callsItem', itemId('missed', m)) ? ' done' : ''}">
+          <div class="fix-top"><span class="tsx">${esc(m.t)}</span><span class="tag">${esc(m.cause || '')}</span>
+            ${m.clipKey ? `<button class="clip-btn" data-clip="${esc(m.clipKey)}" disabled>▶ 듣기</button>` : ''}
+            ${checkBtn('callsItem', itemId('missed', m))}</div>
+          <p class="jp nat"${m.clipKey ? ` data-clip="${esc(m.clipKey)}"` : ''}>${ruby(m.jp_full || '')}</p>
+          <p class="kr">${esc(m.kr || '')}</p>
+          ${keys(m.key)}
+          ${m.how ? `<p class="why">${esc(m.how)}</p>` : ''}
+        </div>`).join('')}` : ''}
 
       <h3 class="call-sec" id="sec-steal">📥 가져다 쓸 표현</h3>
       <p class="hint">상대가 쓴 자연스러운 표현. 「번역 가리기」를 켜면 뜻을 가리고 떠올려볼 수 있다.</p>
@@ -1873,7 +1917,7 @@ function renderCallDetail(c) {
 
   // 카드 체크 → 위쪽 이동 버튼의 「확인 n/전체」를 바로 갱신. 복습 완료 막대는 따로 묶으므로 뒤에 건다.
   wireChecks(app, () => {
-    for (const sec of ['fix', 'steal', 'good']) {
+    for (const sec of ['fix', 'stuck', 'missed', 'steal', 'good']) {
       const b = app.querySelector(`[data-go="sec-${sec}"]`);
       if (b) b.textContent = secLabel[sec]();
     }
