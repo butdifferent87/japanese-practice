@@ -138,6 +138,18 @@
     padding: 10px 12px; font-size: 13px; }
   .stat b { display: block; font-size: 17px; }
   .stat small { color: var(--muted); }
+  .fix .lbl { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; font-weight: 600; }
+  .fix .said-full { color: var(--muted); }
+  .fix .bad { text-decoration: underline wavy rgba(210,70,70,.75); text-underline-offset: 5px; color: var(--text); }
+  .fix .good { background: var(--accent-soft); border-radius: 5px; padding: 0 2px; }
+  .fix .ctx { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+  .fix .ctx .jp { font-size: 14px; }
+  .fix .ctx-kr { display: block; font-size: 12.5px; }
+  .clip-btn { padding: 3px 10px; font-size: 12px; }
+  .clip-btn:disabled { opacity: .45; cursor: default; }
+  .fix.has-clip .jp { cursor: pointer; }
+  .fix.playing { border-color: var(--accent); }
+  .fix.playing .clip-btn { background: var(--accent); color: #fff; border-color: var(--accent); }
   .lock { max-width: 340px; margin: 48px auto; text-align: center; }
   .lock p { color: var(--muted); font-size: 14px; }
   .lock input[type=password] { font: inherit; font-size: 24px; letter-spacing: .35em; text-align: center;
@@ -1648,6 +1660,65 @@ async function decryptCalls(blob, pass) {
   return JSON.parse(new TextDecoder().decode(pt));
 }
 
+// 문장 전체를 보여주되, 문제의 조각이 그 안에 있으면 표시한다(bad = 틀린 곳, good = 고친 곳).
+// 둘 다 {漢字|かな} 마크업을 쓴 같은 문자열이라 그대로 찾으면 된다. 못 찾으면 표시 없이 문장만.
+function hl(full, frag, cls) {
+  const at = frag ? full.indexOf(frag) : -1;
+  if (at < 0 || frag === full) return ruby(full);
+  return ruby(full.slice(0, at)) + `<span class="${cls}">${ruby(frag)}</span>` + ruby(full.slice(at + frag.length));
+}
+
+// ---- 회화 노트 음성 (상대 대사 조각) ----
+// 로컬: 조각 파일(calls/audio/…)을 바로 튼다. 공개본: 그 통화의 음성 잠금본을 받아 풀어서 튼다.
+// 아이폰 사파리는 "누른 순간"에 play() 해야 소리를 낸다. 누른 뒤에 받고 풀면 그 순간이 지나가서
+// 막힌다 — 그래서 상세 화면을 여는 즉시 미리 받아 풀어두고, 준비되면 버튼을 켠다.
+let CALLS_PASS = null;          // 공개본에서 글을 푼 암호. 음성 잠금본도 같은 암호로 연다
+const callAudio = new Audio();
+const callClipUrls = {};         // `${통화id}/${clipKey}` → 재생 주소
+addEventListener('hashchange', () => callAudio.pause());
+
+async function prepareCallAudio(c) {
+  const clips = c.steal.filter(s => s.clipKey);
+  if (!clips.length) return false;
+  if (typeof CALLS_DATA !== 'undefined') {           // 로컬: 파일이 옆에 있다
+    clips.forEach(s => { callClipUrls[`${c.id}/${s.clipKey}`] = s.clip; });
+    return true;
+  }
+  if (clips.every(s => callClipUrls[`${c.id}/${s.clipKey}`])) return true;
+  const blob = await (await fetch(`calls-audio/${c.id}.enc.json`, { cache: 'no-store' })).json();
+  const map = await decryptCalls(blob, CALLS_PASS);
+  for (const [key, b] of Object.entries(map)) {
+    callClipUrls[`${c.id}/${key}`] = URL.createObjectURL(new Blob([b64u8(b)], { type: 'audio/mp4' }));
+  }
+  return true;
+}
+
+function wireCallClips(c) {
+  const cards = app.querySelectorAll('.fix.has-clip');
+  if (!cards.length) return;
+  const play = (card) => {
+    const url = callClipUrls[`${c.id}/${card.dataset.clip}`];
+    if (!url) return;
+    app.querySelectorAll('.fix.playing').forEach(x => x.classList.remove('playing'));
+    card.classList.add('playing');
+    callAudio.src = url;
+    callAudio.currentTime = 0;
+    callAudio.play().catch(() => card.classList.remove('playing'));
+    callAudio.onended = () => card.classList.remove('playing');
+  };
+  prepareCallAudio(c).then(ok => {
+    if (!ok) return;
+    cards.forEach(card => {
+      const btn = card.querySelector('.clip-btn');
+      btn.disabled = false;
+      btn.onclick = (e) => { e.stopPropagation(); play(card); };
+      card.querySelector('.jp').onclick = () => play(card);
+    });
+  }).catch(() => {
+    cards.forEach(card => { card.querySelector('.clip-btn').textContent = '음성 못 불러옴'; });
+  });
+}
+
 function renderCallsLock() {
   app.innerHTML = `
     <div class="lock">
@@ -1664,6 +1735,7 @@ function renderCallsLock() {
     err.textContent = '여는 중…';
     try {
       CALLS = await decryptCalls(CALLS_LOCKED, input.value);
+      CALLS_PASS = input.value;
       if (document.getElementById('callsRemember').checked) localStorage.setItem(CALLS_PASS_KEY, input.value);
       route();
     } catch {
@@ -1715,17 +1787,22 @@ function renderCallDetail(c) {
         <div class="fix">
           <div class="fix-top"><span class="tsx">${esc(f.t)}</span><span class="tag">${esc(f.cat)}</span>
             ${f.repeat_ts && f.repeat_ts.length ? `<span class="tag rep">★ ${f.repeat_ts.length + 1}번 · ${f.repeat_ts.map(esc).join(', ')}</span>` : ''}</div>
-          <p class="jp said">${ruby(f.said)}</p>
-          <p class="jp nat">→ ${ruby(f.natural)}</p>
+          ${f.ctx ? `<p class="ctx">상대: <span class="jp">${ruby(f.ctx.jp)}</span><span class="ctx-kr">${esc(f.ctx.kr || '')}</span></p>` : ''}
+          <p class="lbl">내가 한 말</p>
+          <p class="jp said-full">${hl(f.said_full || f.said, f.said, 'bad')}</p>
+          <p class="lbl">자연스럽게</p>
+          <p class="jp nat">${hl(f.natural_full || f.natural, f.natural, 'good')}</p>
+          ${f.kr ? `<p class="kr">${esc(f.kr)}</p>` : ''}
           <p class="why">${esc(f.why)}</p>
         </div>`).join('')}
 
       <h3 class="call-sec" id="sec-steal">📥 가져다 쓸 표현</h3>
       <p class="hint">상대가 쓴 자연스러운 표현. 「번역 가리기」를 켜면 뜻을 가리고 떠올려볼 수 있다.</p>
       ${[...c.steal].sort(byT).map(s => `
-        <div class="fix">
-          <div class="fix-top"><span class="tsx">${esc(s.t)}</span></div>
-          <p class="jp nat">${ruby(s.jp)}</p>
+        <div class="fix${s.clipKey ? ' has-clip' : ''}"${s.clipKey ? ` data-clip="${esc(s.clipKey)}"` : ''}>
+          <div class="fix-top"><span class="tsx">${esc(s.t)}</span>
+            ${s.clipKey ? '<button class="clip-btn" disabled>▶ 듣기</button>' : ''}</div>
+          <p class="jp nat">${hl(s.jp_full || s.jp, s.jp, 'good')}</p>
           <p class="kr">${esc(s.kr)}</p>
           ${s.note ? `<p class="why">${esc(s.note)}</p>` : ''}
         </div>`).join('')}
@@ -1734,7 +1811,8 @@ function renderCallDetail(c) {
       ${[...c.good].sort(byT).map(g => `
         <div class="fix">
           <div class="fix-top"><span class="tsx">${esc(g.t)}</span></div>
-          <p class="jp">${ruby(g.jp)}</p>
+          <p class="jp">${hl(g.jp_full || g.jp, g.jp, 'good')}</p>
+          ${g.kr ? `<p class="kr">${esc(g.kr)}</p>` : ''}
           <p class="why">${esc(g.why)}</p>
         </div>`).join('')}
 
@@ -1755,6 +1833,7 @@ function renderCallDetail(c) {
     </div>`;
 
   wireDoneBar('calls', c.id, '이 회화 복습 완료로 표시');
+  wireCallClips(c);
   app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
   app.querySelectorAll('[data-go]').forEach(b => b.onclick = () =>
     document.getElementById(b.dataset.go).scrollIntoView({ behavior: 'smooth' }));
@@ -2033,6 +2112,7 @@ warnIfSplitStorage();
 if (!CALLS && CALLS_LOCKED && localStorage.getItem(CALLS_PASS_KEY)) {
   decryptCalls(CALLS_LOCKED, localStorage.getItem(CALLS_PASS_KEY)).then(d => {
     CALLS = d;
+    CALLS_PASS = localStorage.getItem(CALLS_PASS_KEY);
     if (location.hash.startsWith('#calls')) route(); else updateCount(localStorage.getItem('corner') || 'yt');
   }).catch(() => localStorage.removeItem(CALLS_PASS_KEY));
 }
