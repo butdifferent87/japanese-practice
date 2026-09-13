@@ -115,6 +115,37 @@
   /* 후리가나 켤 때 줄간격 확보 */
   body:not(.no-furi) .jp { line-height: 2.1; }
 
+  /* ---- 회화 노트 ---- */
+  .jump { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 8px; }
+  .call-sec { margin: 30px 0 12px; font-size: 16.5px; scroll-margin-top: 96px; }
+  .fix { background: var(--card); border: 1px solid var(--stroke); border-radius: 11px;
+    padding: 11px 13px; margin: 0 0 10px; }
+  .fix .jp { margin: 2px 0 0; }
+  .fix .said { color: var(--muted); text-decoration: line-through;
+    text-decoration-color: rgba(210,70,70,.55); }
+  .fix .nat { font-weight: 600; }
+  .fix .why { font-size: 13px; color: var(--muted); margin: 5px 0 0; }
+  .fix .kr { margin-top: 3px; }
+  .fix-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .tsx { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; font-weight: 600;
+    background: var(--accent-soft); color: var(--accent); }
+  .tag.rep { background: rgba(230,150,0,.14); color: #B26A00; }
+  .patterns { margin: 0; padding-left: 20px; }
+  .patterns li { margin: 0 0 7px; font-size: 14.5px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+  .stat { background: var(--card); border: 1px solid var(--stroke); border-radius: 11px;
+    padding: 10px 12px; font-size: 13px; }
+  .stat b { display: block; font-size: 17px; }
+  .stat small { color: var(--muted); }
+  .lock { max-width: 340px; margin: 48px auto; text-align: center; }
+  .lock p { color: var(--muted); font-size: 14px; }
+  .lock input[type=password] { font: inherit; font-size: 24px; letter-spacing: .35em; text-align: center;
+    width: 100%; padding: 10px; margin: 10px 0 4px; border-radius: 11px;
+    border: 1px solid var(--stroke); background: var(--card); color: var(--text); }
+  .lock label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 14px; }
+  .lock .err { color: #D14545; font-size: 13px; min-height: 1.4em; }
+
   /* 번역 가리기 */
   body.hide-kr .kr { filter: blur(5px); opacity: .55; cursor: pointer; }
   body.hide-kr .kr.reveal { filter: none; opacity: 1; }
@@ -158,6 +189,10 @@
     border: 1px solid var(--stroke); border-radius: 11px; padding: 12px 14px; margin: 0 0 22px; }
   body.hide-kr .itemkr { filter: blur(5px); opacity: .55; cursor: pointer; }
   body.hide-kr .itemkr.reveal { filter: none; opacity: 1; }
+  .krbar { margin: 0 0 6px; }
+  .blockplay { font-size: 12px; padding: 3px 10px; color: var(--muted); }
+  .blockplay.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  body:not(.hide-kr) .itemkr { cursor: pointer; }
   .warn { font-size: 12.5px; color: var(--muted); border-left: 3px solid var(--accent);
     padding: 6px 0 6px 12px; margin: 0 0 18px; }
 
@@ -169,6 +204,12 @@
   }
   .seg .pl:hover { border-color: var(--accent); color: var(--accent); }
   .seg.playing .pl { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .join {
+    font-size: 11px; padding: 3px 6px; margin: 0 -1px; border-radius: 6px;
+    color: var(--muted); background: transparent; border-color: transparent;
+    letter-spacing: -1px;
+  }
+  .join:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
   .edit { font-size: 12px; padding: 3px 9px; color: var(--muted); }
   .edit.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .editor {
@@ -195,7 +236,8 @@
 
   /* ---- 단어장 ---- */
   #savePop {
-    position: absolute; z-index: 40; transform: translate(-50%, -100%);
+    /* fixed 로 둔다 — 스크롤해도 화면 안에 그대로 있어야 누를 수 있다 */
+    position: fixed; z-index: 40; transform: translate(-50%, 0);
     background: var(--accent); color: #fff; border: 0; border-radius: 999px;
     font: 600 12.5px/1 inherit; padding: 8px 13px; cursor: pointer;
     box-shadow: var(--shadow); white-space: nowrap;
@@ -215,6 +257,12 @@
   .word .foot .lbl { font-size: 12px; color: var(--muted); flex: 1; min-width: 0;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .word button { font-size: 12px; padding: 4px 10px; }
+
+  /* ★ 어려운 문장 표시 */
+  .hard { font-size: 13px; padding: 3px 9px; color: var(--muted); line-height: 1; }
+  .hard.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .hardcard .jp { font-size: 16px; margin: 8px 0 0; }
+  .hardcard .segs { margin-bottom: 0; }
 
   /* ---- 완료 체크 ---- */
   .rowtop { display: flex; align-items: flex-start; gap: 10px; }
@@ -261,7 +309,9 @@
   <h1>일본어 연습 아카이브</h1>
   <nav class="corners">
     <button id="cornerYt">유튜브 노트</button>
+    <button id="cornerCalls" hidden>회화 노트</button>
     <button id="cornerNhk" hidden>NHK 듣기</button>
+    <button id="cornerHard">어려운 문장</button>
     <button id="cornerVocab">단어장</button>
   </nav>
 <button id="savePop" hidden>＋ 단어장에 저장</button>
@@ -296,6 +346,9 @@
 
 <script src="data.js"></script>
 <!-- NHK 코너는 로컬에만 있다. 상용 교재라 공개 배포물에서는 deploy.sh 가 이 줄을 지운다. -->
+<!-- 회화 노트: 평문 calls.js 는 로컬에만 있다(deploy.sh 가 이 줄을 지운다).
+     공개본에는 잠금본 calls.enc.js 만 올라가고, 브라우저에서 암호로 푼다. -->
+<script src="calls.enc.js"></script>
 <script>
 const app = document.getElementById('app');
 
@@ -433,6 +486,46 @@ function selectionInfo() {
   return { w, r: r === w ? '' : r, jp, rect: range.getBoundingClientRect() };
 }
 
+// ---- 어려운 문장 ----
+// 문장 단위 표시. 완료(꼭지 단위)와는 별개다 — 꼭지는 끝냈어도 그 안의 특정 문장만
+// 계속 안 잡히는 일이 흔하고, 그 문장들만 다시 도는 게 듣기 훈련의 핵심이라서.
+// 값 규칙은 다른 저장소와 같다(양수=표시, 음수=해제) — 기기 간 병합에 필요하다.
+const HARD_KEY = 'hard.v1';
+let hardMap = loadStore(HARD_KEY);
+function saveHard() {
+  hardMap = mergeWithDisk(HARD_KEY, hardMap, newerTs);
+  saveStore(HARD_KEY, hardMap);
+}
+const hardKey = e => `${e.kind}:${e.ref}:${e.start ?? 0}`;
+const isHard = k => (hardMap[k] || {}).t > 0;
+const hardList = () => Object.entries(hardMap)
+  .filter(([, v]) => v.t > 0).sort((a, b) => b[1].t - a[1].t)
+  .map(([k, v]) => ({ key: k, ...v }));
+
+function toggleHard(entry) {
+  const k = hardKey(entry);
+  hardMap[k] = isHard(k) ? { ...hardMap[k], t: -Date.now() } : { ...entry, t: Date.now() };
+  saveHard();
+  return isHard(k);
+}
+
+// 목록에서 바로 들을 수 있어야 의미가 있다. 재생에 필요한 것만 저장해 자족적으로 만든다.
+//   NHK  — kind:'nhk', ref: 파일명            (파일 하나가 곧 그 문장)
+//   유튜브 — kind:'yt',  ref: 영상 id, start/end (한 파일 안의 구간)
+function hardEntryOfCue(cue) {
+  const file = cue.dataset.file;
+  if (file) {
+    return { kind: 'nhk', ref: file, start: 0, end: null,
+             jp: cue.dataset.jp || '', label: currentLabel(), h: location.hash || '#' };
+  }
+  return { kind: 'yt', ref: (location.hash.slice(1) || ''), 
+           start: +cue.dataset.start || 0, end: cue.dataset.end ? +cue.dataset.end : null,
+           jp: cue.dataset.jp || '', label: currentLabel(), h: location.hash || '#' };
+}
+
+const hardBtnHtml = (entry) =>
+  `<button class="hard${isHard(hardKey(entry)) ? ' on' : ''}" title="어려운 문장으로 표시">★</button>`;
+
 // ---- 기기 간 동기화 (수동) ----
 // 서버가 없으니 상태를 코드로 만들어 손으로 옮긴다. 아이폰↔맥은 유니버설
 // 클립보드가 붙여넣기까지 알아서 넘겨준다.
@@ -446,7 +539,7 @@ const b64d = s => Uint8Array.from(
 
 async function exportState() {
   // {d: 완료, v: 단어장}. 옛 코드가 만든 코드는 d 가 없는 통짜 객체라 받는 쪽에서 갈라 읽는다.
-  const json = new TextEncoder().encode(JSON.stringify({ d: doneMap, v: vocabMap }));
+  const json = new TextEncoder().encode(JSON.stringify({ d: doneMap, v: vocabMap, h: hardMap }));
   // 완료가 쌓이면 코드가 길어진다. 압축이 있으면 쓰고, 없으면 그냥 보낸다.
   if (typeof CompressionStream === 'undefined') return 'r' + b64e(json);
   const cs = new CompressionStream('deflate-raw');
@@ -479,6 +572,14 @@ function mergeState(incoming) {
   }
   if (changed) saveDone();
 
+  let hChanged = 0;
+  for (const [key, entry] of Object.entries((incoming && incoming.h) || {})) {
+    if (!entry || typeof entry.t !== 'number') continue;
+    const cur = hardMap[key];
+    if (!cur || Math.abs(entry.t) > Math.abs(cur.t)) { hardMap[key] = entry; hChanged++; }
+  }
+  if (hChanged) saveHard();
+
   let vChanged = 0;
   for (const [key, entry] of Object.entries(voc)) {
     if (!entry || typeof entry.t !== 'number') continue;
@@ -487,7 +588,7 @@ function mergeState(incoming) {
   }
   if (vChanged) saveVocab();
 
-  return changed + vChanged;
+  return changed + vChanged + hChanged;
 }
 
 async function syncLink() {
@@ -564,11 +665,12 @@ audio.addEventListener('ended', () => {
 // ---- 꼭지 전체 이어 듣기 ----
 // 문장마다 파일이 따로라 한 번에 재생할 수 없다. 끝나는 대로 다음 파일로 넘긴다.
 // 조각 분할은 무시하고 문장 통째로 흘린다 — 통으로 듣는 게 이 기능의 목적이다.
-const seq = { on: false, list: [], i: 0, advancing: false };
+const seq = { on: false, list: [], i: 0, advancing: false, btn: null };
 
 function seqStop() {
   seq.on = false;
   seq.list = [];
+  seq.btn = null;
   stopSeg();
   syncSeqButton();
 }
@@ -591,22 +693,29 @@ function seqPlayCurrent() {
   syncSeqButton();
 }
 
-function seqStart() {
-  const list = [...app.querySelectorAll('.cue.has-audio')];
+function seqStart(list, btn) {
+  list = (list && list.length) ? list : [...app.querySelectorAll('.cue.has-audio')];
   if (!list.length) return;
   seq.on = true;
   seq.list = list;
+  seq.btn = btn || document.getElementById('playAll');
   seq.i = 0;
   seqPlayCurrent();
 }
 
 function syncSeqButton() {
-  const btn = document.getElementById('playAll');
-  if (!btn) return;
-  btn.classList.toggle('on', seq.on);
-  btn.textContent = seq.on
-    ? `■ 정지 (${seq.i + 1}/${seq.list.length})`
-    : `▶ 꼭지 전체 듣기`;
+  // 이어 듣기 트리거가 둘이다 — 꼭지 전체 버튼과 문단별 버튼. 지금 도는 쪽만 상태를 바꾼다.
+  const main = document.getElementById('playAll');
+  if (main) {
+    const mine = seq.on && seq.btn === main;
+    main.classList.toggle('on', mine);
+    main.textContent = mine ? `■ 정지 (${seq.i + 1}/${seq.list.length})` : '▶ 꼭지 전체 듣기';
+  }
+  document.querySelectorAll('.blockplay').forEach(b => {
+    const mine = seq.on && seq.btn === b;
+    b.classList.toggle('on', mine);
+    b.textContent = mine ? `■ ${seq.i + 1}/${seq.list.length}` : '▶ 문단';
+  });
 }
 
 // 재생 버튼은 ▶/■ 로 바뀌는데, 조각 버튼은 라벨이 숫자(1·2·3)라 그대로 덮으면 사라진다.
@@ -735,7 +844,7 @@ function renderDetail(v) {
       ${v.cues.map((c, i) => `
         <div class="cue" data-jp="${esc(c.jp)}"
              data-start="${c.t}" data-end="${c.e != null ? c.e : (v.cues[i + 1] ? v.cues[i + 1].t : hms(v.duration))}">
-          <button class="ts" data-t="${c.t}">${mmss(c.t)}</button><button class="pl" title="이 구간만 듣기">▶</button>
+          <button class="ts" data-t="${c.t}">${mmss(c.t)}</button><button class="pl" title="이 구간만 듣기">▶</button>${hardBtnHtml({ kind: 'yt', ref: v.id, start: c.t })}
           <p class="jp">${ruby(c.jp)}</p>
           <p class="kr">${esc(c.kr)}</p>
         </div>`).join('')}
@@ -763,6 +872,7 @@ function renderDetail(v) {
     }
   });
   app.querySelectorAll('.kr').forEach(p => p.onclick = () => p.classList.toggle('reveal'));
+  app.querySelectorAll('.cue').forEach(wireHard);
 
   // 오디오 파일이 있을 때만 구간 재생을 켠다. opus(24k) 우선, 없으면 m4a 폴백.
   // 존재 여부만 보면 안 된다 — 사파리가 opus를 못 읽는 경우 파일은 받아지는데
@@ -889,11 +999,30 @@ function addSplit(file, t, i = null) {
   saveSplits();
   return true;
 }
+/** 경계 하나를 지운다 = 그 양옆 조각이 도로 하나가 된다. */
+function removeSplitAt(file, idx) {
+  const cur = splitsOf(file);
+  if (idx < 0 || idx >= cur.length) return false;
+  cur.splice(idx, 1);
+  // 키를 지우면 안 된다. 저장할 때 디스크 내용과 합치는데, '없어짐'은 합치기로
+  // 전달되지 않아 지운 경계가 되살아난다. 빈 배열을 남겨 '나눈 곳 없음'을 명시한다.
+  splitMap[file] = cur;
+  saveSplits();
+  return true;
+}
+
+function clearSplits(file) {
+  if (!splitsOf(file).length) return false;
+  splitMap[file] = [];
+  saveSplits();
+  return true;
+}
+
 function undoSplit(file) {
   const cur = splitsOf(file);
   if (!cur.length) return false;
   cur.pop();
-  if (cur.length) splitMap[file] = cur; else delete splitMap[file];
+  splitMap[file] = cur;
   saveSplits();
   return true;
 }
@@ -940,7 +1069,7 @@ async function analyzeAudio(src) {
   while (a < rms.length && rms[a] < thresh) a++;
   while (b > a && rms[b] < thresh) b--;
 
-  const env = { rms, hop, speechStart: a * hop, speechEnd: (b + 1) * hop, duration: buf.duration };
+  const env = { rms, hop, peak: Math.max(...rms), speechStart: a * hop, speechEnd: (b + 1) * hop, duration: buf.duration };
   envCache.set(src, env);
   return env;
 }
@@ -1014,8 +1143,13 @@ function segsHtml(file) {
   const bounds = [0, ...cuts];
   return bounds.map((start, n) => {
     const end = n < cuts.length ? cuts[n] : '';
-    return `<span class="seg" data-src="${esc(src)}" data-start="${start}" data-end="${end}">
+    const seg = `<span class="seg" data-src="${esc(src)}" data-start="${start}" data-end="${end}">
       <button class="pl" title="${secs(start)}부터">${n + 1}</button></span>`;
+    // 조각과 조각 사이에 그 경계를 없애는 버튼을 둔다 — 어느 경계를 붙일지 고를 수 있어야 한다.
+    const join = n < cuts.length
+      ? `<button class="join" data-cut="${n}" title="${secs(cuts[n])} 경계를 없애 ${n + 1}·${n + 2} 를 합친다">⇥⇤</button>`
+      : '';
+    return seg + join;
   }).join('');
 }
 
@@ -1034,6 +1168,7 @@ function renderNhkDetail(it, i) {
         번역이 가려져 있으면 클릭해서 확인.</p>
       ${it.blocks.map(b => `
         <div class="block">
+          <div class="krbar"><button class="blockplay" title="이 문단의 일본어를 이어서 듣는다">▶ 문단</button></div>
           <p class="itemkr">${esc(b.kr)}</p>
           ${b.cues.map(c => `
             <div class="cue${c.src ? ' has-audio' : ''}" data-file="${esc(c.src || '')}"
@@ -1041,6 +1176,7 @@ function renderNhkDetail(it, i) {
                  data-jp="${esc(c.jp)}">
               ${c.src ? `<div class="segs">${segsHtml(c.src)}
                 <button class="edit" title="이 문장을 원하는 지점에서 끊는다">✂ 편집</button>
+                ${hardBtnHtml({ kind: 'nhk', ref: c.src, start: 0 })}
               </div>` : ''}
               <p class="jp">${jpHtml(c.jp, c.src)}</p>
             </div>`).join('')}
@@ -1053,8 +1189,27 @@ function renderNhkDetail(it, i) {
   playAll.onclick = () => { seq.on ? seqStop() : seqStart(); };
   syncSeqButton();
   app.querySelector('.back').onclick = () => { location.hash = 'nhk'; };
-  app.querySelectorAll('.itemkr').forEach(p => {
-    p.onclick = e => e.currentTarget.classList.toggle('reveal');
+  // 한국어 문단 = 그 아래 일본어 문장 여러 개를 묶는 단위. 그 범위만 이어서 듣게 한다.
+  const cuesOfBlock = block => [...block.querySelectorAll('.cue.has-audio')];
+  app.querySelectorAll('.block').forEach(block => {
+    const btn = block.querySelector('.blockplay');
+    if (btn) btn.onclick = () => {
+      if (seq.on && seq.btn === btn) { seqStop(); return; }
+      seqStop();
+      seqStart(cuesOfBlock(block), btn);
+    };
+    const kr = block.querySelector('.itemkr');
+    if (!kr) return;
+    kr.onclick = () => {
+      // 번역이 가려져 있으면 먼저 여는 게 우선이다. 이미 보이면 그 범위를 듣는다.
+      if (document.body.classList.contains('hide-kr') && !kr.classList.contains('reveal')) {
+        kr.classList.add('reveal');
+        return;
+      }
+      if (seq.on && seq.btn === btn) { seqStop(); return; }
+      seqStop();
+      seqStart(cuesOfBlock(block), btn);
+    };
   });
   app.querySelectorAll('.cue.has-audio').forEach(wireCue);
 }
@@ -1064,6 +1219,16 @@ function wireCue(cue) {
   cue.querySelectorAll('.seg').forEach(seg => {
     seg.querySelector('.pl').onclick = () => playSeg(seg);
   });
+  cue.querySelectorAll('.join').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      if (!removeSplitAt(file, +btn.dataset.cut)) return;
+      const open = cue.querySelector('.editor');
+      repaintSegs(cue, file);
+      if (!open) cue.querySelector('.edit')?.classList.remove('on');
+      toast('경계를 없앴다');
+    };
+  });
   // 글자를 누르면 문장 전체. 안 나눈 문장은 그 조각이 곧 전체다.
   cue.querySelector('.jp').onclick = () => {
     const segs = cue.querySelectorAll('.seg');
@@ -1071,6 +1236,19 @@ function wireCue(cue) {
   };
   const edit = cue.querySelector('.edit');
   if (edit) edit.onclick = () => toggleEditor(cue, file, edit);
+  wireHard(cue);
+}
+
+/** ★ 버튼. 눌린 상태는 저장소에서 읽으므로 화면을 다시 그려도 유지된다. */
+function wireHard(cue) {
+  const btn = cue.querySelector('.hard');
+  if (!btn) return;
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    const on = toggleHard(hardEntryOfCue(cue));
+    btn.classList.toggle('on', on);
+    toast(on ? '어려운 문장에 추가' : '어려운 문장에서 뺌');
+  };
 }
 
 // 조각과 글자 표시를 함께 다시 그린다 — 자른 자리가 글자 위에도 나타나야 한다.
@@ -1115,7 +1293,7 @@ function toggleEditor(cue, file, btn) {
     </div>
     <div class="row">
       <button class="cut">✂ 여기서 자르기</button>
-      <button class="undo">되돌리기</button>
+      <button class="undo">전부 합치기</button>
       <span class="note-sm cnt"></span>
     </div>
     <p class="tip"><b>끊고 싶은 글자를 누른다</b> — 그 지점으로 커서가 가고 바로 들린다.
@@ -1156,7 +1334,7 @@ function toggleEditor(cue, file, btn) {
     const t = measured[tokens[i].ci];
     return typeof t === 'number' ? t : null;
   };
-  const filled = (() => {
+  const buildFilled = () => {
     if (!measured) return null;
     const out = tokens.map((_, i) => anchorAt(i));
     // 앞뒤로 값이 달라지는 지점만 기준점으로 인정한다
@@ -1165,6 +1343,17 @@ function toggleEditor(cue, file, btn) {
     // 기준점이 2개 미만이면 정렬이 사실상 실패한 문장이다. 같은 시각을 계속 돌려주면
     // 어느 글자를 눌러도 같은 자리가 잡히므로, 차라리 통째로 추정으로 돌아간다.
     if (isAnchor.filter(Boolean).length < 2) return null;
+
+    // 기준점이 여러 개여도, 그것들이 음성의 앞부분에만 몰려 있으면 정렬이 도중에
+    // 끊긴 것이다. 그대로 보간하면 뒤쪽 글자 수십 개가 짧은 구간에 뭉쳐 범위가
+    // 통째로 어긋난다(실측: 6.6초 음성인데 마지막 글자가 2.0초).
+    // 말이 있는 구간의 60% 미만만 덮으면 믿지 않는다 — 전체의 1.5%(24문장)가 여기 걸린다.
+    if (env) {
+      const anchors = out.filter((t, i) => isAnchor[i]);
+      const span = env.speechEnd - env.speechStart;
+      const covered = anchors[anchors.length - 1] - anchors[0];
+      if (span > 0 && covered / span < 0.6) return null;
+    }
 
     for (let i = 0; i < out.length; i++) {
       if (isAnchor[i]) continue;
@@ -1178,7 +1367,8 @@ function toggleEditor(cue, file, btn) {
       out[i] = out[p] + (out[n] - out[p]) * ratio;
     }
     return out;
-  })();
+  };
+  let filled = buildFilled();
 
   const timeAt = i => {
     const t = filled ? filled[i] : null;
@@ -1188,18 +1378,29 @@ function toggleEditor(cue, file, btn) {
     return a + (b - a) * (tokens[i].cum / total);
   };
 
-  // 추정 지점 근처에서 가장 조용한 자리로 붙인다. 말 한가운데를 자르면 소리가 잘린다.
-  // 실측 시각이 있으면 이미 정확하므로 붙이는 범위를 좁힌다 — 넓게 잡으면 옆 단어의
-  // 빈 자리로 끌려간다.
-  const snap = (t, win = measured ? 0.10 : 0.22) => {
+  // 자를 자리를 소리에 맞춰 다듬는다.
+  //
+  // 정렬 시각은 단어 **앞의 쉼 안쪽**을 가리키는 경우가 많다(실측 0.2~0.3초 이르다).
+  // 그 자리에서 자르면 앞 조각은 꼬리가 잘리고 뒤 조각은 앞 소리를 물고 시작한다.
+  // 그래서 두 가지로 나눠 다듬는다:
+  //   ① 지정 지점이 무음 안이면 → 말이 다시 시작되는 지점까지 앞으로 민다
+  //   ② 이미 말 위면 → 앞쪽으로 치우친 좁은 창에서 가장 조용한 자리로
+  // ②의 창을 뒤로 넓게 열지 않는 이유는, 넓히면 이전 단어의 쉼으로 끌려가 오히려
+  // 더 앞에서 잘리기 때문이다(실측: 뒤로 최대 0.22초까지 밀렸다).
+  const snap = (t) => {
     if (!env) return t;
     const { rms, hop } = env;
-    const lo = Math.max(0, Math.round((t - win) / hop));
-    const hi = Math.min(rms.length - 1, Math.round((t + win) / hop));
-    let best = t, low = Infinity;
-    for (let k = lo; k <= hi; k++) {
-      if (rms[k] < low) { low = rms[k]; best = k * hop; }
+    const thr = env.peak * 0.06;
+    let k = Math.min(rms.length - 1, Math.round(t / hop));
+    if (rms[k] < thr) {
+      const end = Math.min(rms.length - 1, Math.round((t + 0.45) / hop));
+      while (k + 1 <= end && rms[k + 1] < thr) k += 1;
+      return Math.min((k + 1) * hop, t + 0.45);
     }
+    const lo = Math.max(0, Math.round((t - 0.06) / hop));
+    const hi = Math.min(rms.length - 1, Math.round((t + 0.12) / hop));
+    let best = t, low = Infinity;
+    for (let j = lo; j <= hi; j++) if (rms[j] < low) { low = rms[j]; best = j * hop; }
     return best;
   };
 
@@ -1220,9 +1421,13 @@ function toggleEditor(cue, file, btn) {
   box.restoreJp = () => { cue.classList.remove('editing'); };
 
   // 지금 무엇을 근거로 위치를 잡는지 알려준다 — 어긋날 때 원인을 짐작할 수 있다.
-  box.querySelector('.src-note').textContent = filled
-    ? '글자 위치는 음성에서 실측한 값이다.'
-    : '이 문장은 정렬이 안 붙어 모라 수로 추정한다 — 어긋날 수 있다.';
+  function updateSrcNote() {
+    const el = box.querySelector('.src-note');
+    if (el) el.textContent = filled
+      ? '글자 위치는 음성에서 실측한 값이다.'
+      : '이 문장은 정렬이 안 붙어 모라 수로 추정한다 — 어긋날 수 있다.';
+  }
+  updateSrcNote();
 
   pre.addEventListener('loadedmetadata', () => {
     range.max = pre.duration.toFixed(2);
@@ -1231,7 +1436,12 @@ function toggleEditor(cue, file, btn) {
 
   // 음량 포락선은 디코딩이 필요해 조금 늦게 온다. 오기 전에도 클릭은 되고(비례 추정),
   // 오고 나면 자동으로 정확해진다.
-  analyzeAudio(src).then(e => { env = e; }).catch(() => {});
+  analyzeAudio(src).then(e => {
+    env = e;
+    // 포락선이 와야 커버리지 판정을 할 수 있다 — 도착 시점에 다시 계산한다.
+    filled = buildFilled();
+    updateSrcNote();
+  }).catch(() => {});
 
   const seekPreview = (manual) => {
     stopSeg();                       // 본 재생기가 돌고 있으면 멈춘다
@@ -1270,7 +1480,12 @@ function toggleEditor(cue, file, btn) {
     repaintSegs(cue, file);
     toggleEditor(cue, file, cue.querySelector('.edit'));
     const fresh = cue.querySelector('.editor input');
-    if (fresh) fresh.value = at;                       // 커서 위치는 유지
+    if (fresh) {
+      fresh.value = at;                                // 커서 위치는 유지
+      // 시간 표시도 같이 되돌린다. 안 하면 슬라이더는 그 자리인데 0:00.0 으로 보인다.
+      const lbl = cue.querySelector('.editor .t');
+      if (lbl) lbl.textContent = secs(+at);
+    }
   };
 
   box.querySelector('.cut').onclick = () => {
@@ -1281,8 +1496,9 @@ function toggleEditor(cue, file, btn) {
 
   box.querySelector('.undo').onclick = () => {
     clearTimeout(previewStop); pre.pause();
-    if (!undoSplit(file)) { toast('되돌릴 분할이 없다'); return; }
+    if (!clearSplits(file)) { toast('나눈 곳이 없다'); return; }
     reopen();
+    toast('한 문장으로 되돌렸다');
   };
 }
 
@@ -1344,26 +1560,237 @@ function highlightIn(sentence, word) {
   }).join('');
 }
 
+// ---- 어려운 문장 모아 보기 ----
+let hardQuery = '';
+
+/** 유튜브 음성은 opus/m4a 중 브라우저가 읽을 수 있는 쪽을 골라야 한다. 한 번 고르면 캐시. */
+const srcCache = new Map();
+async function ytSrc(id) {
+  if (srcCache.has(id)) return srcCache.get(id);
+  const cands = [
+    ['audio/ogg; codecs=opus', `raw/audio/${id}.opus`],
+    ['audio/mp4; codecs=mp4a.40.2', `raw/audio/${id}.m4a`],
+  ].filter(([t]) => audio.canPlayType(t) !== '').map(([, u]) => u);
+  for (const c of cands) {
+    const r = await fetch(c, { method: 'HEAD' }).catch(() => null);
+    if (r && r.ok) { srcCache.set(id, c); return c; }
+  }
+  srcCache.set(id, '');
+  return '';
+}
+
+function renderHard() {
+  const all = hardList();
+  const q = hardQuery.trim();
+  const hits = q ? all.filter(v =>
+    (v.jp || '').includes(q) || (v.label || '').includes(q)) : all;
+
+  app.innerHTML = `
+    <input class="search" id="hardQ" placeholder="문장·자료 검색" value="${esc(q)}">
+    ${all.length ? `<p class="hint">${hits.length}문장${q ? ` (전체 ${all.length})` : ''}.
+      안 잡히는 문장만 모아 다시 듣는 자리다.</p>` : ''}
+    ${hits.length ? `<div class="vocab">${hits.map(v => `
+      <div class="word hardcard" data-key="${esc(v.key)}">
+        <div class="segs"><span class="seg" data-start="${v.start || 0}"${v.end != null ? ` data-end="${v.end}"` : ''}>
+          <button class="pl" title="이 문장 듣기">▶</button></span></div>
+        <p class="jp">${ruby(v.jp || '')}</p>
+        <div class="foot">
+          <span class="lbl">${esc(v.label || '')}</span>
+          ${v.h ? '<button class="go">문장으로</button>' : ''}
+          <button class="del">빼기</button>
+        </div>
+      </div>`).join('')}</div>`
+      : `<p class="empty">${all.length ? '검색 결과 없음.'
+        : '아직 없다. 문장 옆 ★ 를 누르면 여기 모인다.'}</p>`}`;
+
+  const input = document.getElementById('hardQ');
+  input.oninput = () => {
+    hardQuery = input.value;
+    const at = input.selectionStart;
+    renderHard();
+    const n = document.getElementById('hardQ'); n.focus(); n.setSelectionRange(at, at);
+  };
+
+  app.querySelectorAll('.hardcard').forEach(async (card) => {
+    const v = hardMap[card.dataset.key];
+    card.querySelector('.del').onclick = () => {
+      hardMap[card.dataset.key] = { ...v, t: -Date.now() };
+      saveHard(); renderHard(); updateCount('hard');
+    };
+    const go = card.querySelector('.go');
+    if (go) go.onclick = () => { location.hash = (v.h || '').replace(/^#/, ''); };
+
+    // 재생: 저장해둔 정보만으로 자족적으로 돌린다
+    const seg = card.querySelector('.seg');
+    const src = v.kind === 'nhk' ? 'raw/nhk/' + v.ref : await ytSrc(v.ref);
+    if (!src) { seg.querySelector('.pl').remove(); return; }
+    seg.dataset.src = src;
+    seg.querySelector('.pl').onclick = () => playSeg(seg);
+  });
+}
+
+// ---- 회화 노트 ----
+// 로컬(calls.js 있음)은 평문을 바로 쓴다. 공개본은 잠금본(calls.enc.js)뿐이라 암호로 푼다.
+// 풀린 결과는 메모리에만 둔다. 「이 기기에서 기억」을 켜면 암호를 localStorage 에 둬서
+// 다음부터 자동으로 연다 — 폰에서 매번 치지 않게. 남과 같이 쓰는 기기에선 끄고 쓸 것.
+let CALLS = typeof CALLS_DATA !== 'undefined' ? CALLS_DATA : null;
+const CALLS_LOCKED = typeof CALLS_ENC !== 'undefined' ? CALLS_ENC : null;
+const CALLS_PASS_KEY = 'callsPass';
+const b64u8 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+async function decryptCalls(blob, pass) {
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: b64u8(blob.salt), iterations: blob.iter, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64u8(blob.iv) }, key, b64u8(blob.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+function renderCallsLock() {
+  app.innerHTML = `
+    <div class="lock">
+      <h2>🔒 회화 노트</h2>
+      <p>실제 통화에서 나온 문장이라 잠가뒀다.</p>
+      <input type="password" id="callsPass" autocomplete="off" autofocus>
+      <label><input type="checkbox" id="callsRemember" checked> 이 기기에서 기억</label>
+      <button id="callsOpen">열기</button>
+      <p class="err" id="callsErr"></p>
+    </div>`;
+  const input = document.getElementById('callsPass');
+  const err = document.getElementById('callsErr');
+  const open = async () => {
+    err.textContent = '여는 중…';
+    try {
+      CALLS = await decryptCalls(CALLS_LOCKED, input.value);
+      if (document.getElementById('callsRemember').checked) localStorage.setItem(CALLS_PASS_KEY, input.value);
+      route();
+    } catch {
+      err.textContent = '암호가 다르다.';
+      input.select();
+    }
+  };
+  document.getElementById('callsOpen').onclick = open;
+  input.onkeydown = e => { if (e.key === 'Enter') open(); };
+}
+
+function renderCallsList() {
+  app.innerHTML = CALLS.length ? '<div class="grid">' + CALLS.map(c => `
+    <div class="item plain${isDone('calls', c.id) ? ' done' : ''}" data-id="${esc(c.id)}">
+      <div>
+        <div class="rowtop"><h2>${esc(c.title)}</h2>${checkBtn('calls', c.id)}</div>
+        <div class="meta"><span>${esc(c.date)}</span><span>${esc(c.duration)}</span><span>${esc(c.with || '')}</span></div>
+        <p>고칠 표현 ${c.fixes.length} · 가져다 쓸 표현 ${c.steal.length} · 새 단어 ${c.vocab.length}</p>
+      </div>
+    </div>`).join('') + '</div>'
+    : '<p class="empty">아직 회화 노트 없음.</p>';
+  app.querySelectorAll('.item').forEach(el => el.onclick = () => { location.hash = 'calls/' + el.dataset.id; });
+  wireChecks(app, () => updateCount('calls'));
+}
+
+function renderCallDetail(c) {
+  const byT = (a, b) => (a.t < b.t ? -1 : 1);
+  const fixes = [...c.fixes].sort(byT);
+  const secs = [
+    ['sec-fix', `✏️ 고칠 표현 ${fixes.length}`],
+    ['sec-steal', `📥 가져다 쓸 표현 ${c.steal.length}`],
+    ['sec-good', `👍 잘한 점 ${c.good.length}`],
+    ['sec-vocab', `📖 새 단어 ${c.vocab.length}`],
+    ['sec-stats', '📊 말버릇'],
+  ];
+  app.innerHTML = `
+    <button class="back">← 회화 목록</button>
+    <div class="detail">
+      <h2>${esc(c.title)}</h2>
+      <div class="meta"><span>${esc(c.date)}</span><span>${esc(c.duration)}</span><span>${esc(c.with || '')}</span></div>
+      <div class="jump">${secs.map(([id, label]) => `<button data-go="${id}">${label}</button>`).join('')}</div>
+
+      <h3 class="call-sec">🔁 반복되는 실수</h3>
+      <ul class="patterns">${c.patterns.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+
+      <h3 class="call-sec" id="sec-fix">✏️ 고칠 표현</h3>
+      <p class="hint">줄 친 쪽이 실제로 한 말, 굵은 쪽이 자연스러운 표현. 시각은 녹음 속 위치.</p>
+      ${fixes.map(f => `
+        <div class="fix">
+          <div class="fix-top"><span class="tsx">${esc(f.t)}</span><span class="tag">${esc(f.cat)}</span>
+            ${f.repeat_ts && f.repeat_ts.length ? `<span class="tag rep">★ ${f.repeat_ts.length + 1}번 · ${f.repeat_ts.map(esc).join(', ')}</span>` : ''}</div>
+          <p class="jp said">${ruby(f.said)}</p>
+          <p class="jp nat">→ ${ruby(f.natural)}</p>
+          <p class="why">${esc(f.why)}</p>
+        </div>`).join('')}
+
+      <h3 class="call-sec" id="sec-steal">📥 가져다 쓸 표현</h3>
+      <p class="hint">상대가 쓴 자연스러운 표현. 「번역 가리기」를 켜면 뜻을 가리고 떠올려볼 수 있다.</p>
+      ${[...c.steal].sort(byT).map(s => `
+        <div class="fix">
+          <div class="fix-top"><span class="tsx">${esc(s.t)}</span></div>
+          <p class="jp nat">${ruby(s.jp)}</p>
+          <p class="kr">${esc(s.kr)}</p>
+          ${s.note ? `<p class="why">${esc(s.note)}</p>` : ''}
+        </div>`).join('')}
+
+      <h3 class="call-sec" id="sec-good">👍 잘한 점</h3>
+      ${[...c.good].sort(byT).map(g => `
+        <div class="fix">
+          <div class="fix-top"><span class="tsx">${esc(g.t)}</span></div>
+          <p class="jp">${ruby(g.jp)}</p>
+          <p class="why">${esc(g.why)}</p>
+        </div>`).join('')}
+
+      <h3 class="call-sec" id="sec-vocab">📖 새 단어</h3>
+      <div class="notes">${c.vocab.map(v => `
+        <div class="note">
+          <b class="jp">${ruby(v.jp)}</b>
+          <p class="mn">${esc(v.kr)}</p>
+          <p class="pt">${v.t ? esc(v.t) + ' · ' : ''}${esc(v.context || '')}</p>
+        </div>`).join('')}
+      </div>
+
+      <h3 class="call-sec" id="sec-stats">📊 말버릇 (통화 전체)</h3>
+      <div class="stats">${(c.stats || []).map(s => `
+        <div class="stat"><b>${esc(s.label)}</b>${esc(s.value)}${s.note ? `<br><small>${esc(s.note)}</small>` : ''}</div>`).join('')}
+      </div>
+      ${doneBar('calls', c.id, '이 회화 복습 완료로 표시')}
+    </div>`;
+
+  wireDoneBar('calls', c.id, '이 회화 복습 완료로 표시');
+  app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
+  app.querySelectorAll('[data-go]').forEach(b => b.onclick = () =>
+    document.getElementById(b.dataset.go).scrollIntoView({ behavior: 'smooth' }));
+  app.querySelectorAll('.kr').forEach(p => p.onclick = () => p.classList.toggle('reveal'));
+}
+
 // ---- 코너 전환 ----
 const cornerBtns = {
   yt: document.getElementById('cornerYt'),
+  calls: document.getElementById('cornerCalls'),
   nhk: document.getElementById('cornerNhk'),
   vocab: document.getElementById('cornerVocab'),
+  hard: document.getElementById('cornerHard'),
 };
 cornerBtns.nhk.hidden = NHK.length === 0;
+cornerBtns.calls.hidden = !(CALLS || CALLS_LOCKED);
+cornerBtns.calls.onclick = () => { location.hash = 'calls'; };
 cornerBtns.yt.onclick = () => { location.hash = ''; };
 cornerBtns.nhk.onclick = () => { location.hash = 'nhk'; };
 cornerBtns.vocab.onclick = () => { location.hash = 'vocab'; };
+cornerBtns.hard.onclick = () => { location.hash = 'hard'; };
 
 function setCorner(name) {
   for (const [key, btn] of Object.entries(cornerBtns)) btn.classList.toggle('on', key === name);
+  localStorage.setItem('corner', name);   // 다음에 열 때 이 코너로 돌아온다
   updateCount(name);
 }
 
 function updateCount(name) {
   const el = document.getElementById('count');
-  if (name === 'vocab') {
+  if (name === 'hard') {
+    el.textContent = `${hardList().length}문장`;
+  } else if (name === 'vocab') {
     el.textContent = `${vocabList().length}개`;
+  } else if (name === 'calls') {
+    el.textContent = CALLS ? `${CALLS.length}통화 · 복습 ${doneCount('calls', CALLS.map(c => c.id))}` : '잠김';
   } else if (name === 'nhk') {
     const done = doneCount('nhk', NHK.map(i => i.group));
     el.textContent = `${NHK.length}꼭지 · 완료 ${done}`;
@@ -1379,17 +1806,50 @@ let pendingSel = null;
 
 function hideSavePop() { savePop.hidden = true; pendingSel = null; }
 
+/** 선택 위쪽에 띄우되, 자리가 없으면 아래로 넘긴다. 화면 밖으로 나가지 않게 가둔다. */
+function placeSavePop() {
+  if (!pendingSel) return;
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0) { hideSavePop(); return; }
+  const r = sel.getRangeAt(0).getBoundingClientRect();
+  if (!r.width && !r.height) return;
+
+  savePop.hidden = false;                       // 크기를 재려면 먼저 보여야 한다
+  const w = savePop.offsetWidth, h = savePop.offsetHeight;
+  const gap = 8;
+  const above = r.top - gap - h;
+  let top = above >= 4 ? above : r.bottom + gap;
+  // 선택이 화면 밖으로 밀려도 버튼은 화면 안에 남아야 누를 수 있다. 위아래 모두 가둔다.
+  top = Math.min(Math.max(top, 4), innerHeight - h - 4);
+  const left = Math.min(Math.max(r.left + r.width / 2, w / 2 + 8), innerWidth - w / 2 - 8);
+  savePop.style.left = left + 'px';
+  savePop.style.top = top + 'px';
+}
+
 document.addEventListener('selectionchange', () => {
   // 선택이 확정되는 순간을 잡기 어려워, 바뀔 때마다 보고 유효하면 버튼을 띄운다.
   const info = selectionInfo();
   if (!info) { hideSavePop(); return; }
   pendingSel = info;
-  const r = info.rect;
-  savePop.style.left = (r.left + r.width / 2 + scrollX) + 'px';
-  savePop.style.top = (r.top + scrollY - 8) + 'px';
-  savePop.hidden = false;
+  placeSavePop();
 });
-addEventListener('scroll', hideSavePop, { passive: true });
+
+// 스크롤할 때 숨기면 안 된다 — 버튼이 화면 밖에 있어 스크롤해서 다가가는 경우가 있고,
+// 그러면 맨 아래 문장은 영영 저장할 수 없다. 숨기는 대신 따라다니게 한다.
+let popTick = 0;
+// capture 로 받는다 — 스크롤이 내부 요소에서 나면 window 까지 올라오지 않는다.
+addEventListener('scroll', () => {
+  if (savePop.hidden || popTick) return;
+  popTick = requestAnimationFrame(() => { popTick = 0; placeSavePop(); });
+}, { passive: true, capture: true });
+addEventListener('resize', placeSavePop);
+
+// 버튼을 누르는 순간 브라우저가 텍스트 선택을 푼다 → selectionchange 가 떠서 버튼이
+// 스스로 사라지고 클릭이 무산된다. mousedown 을 막아 선택을 유지한다.
+// (스크립트로 click() 하면 mousedown 이 없어 이 문제가 안 드러난다 — 그래서 자동
+//  테스트만으로는 못 잡았다.)
+savePop.addEventListener('mousedown', (e) => e.preventDefault());
+savePop.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
 
 savePop.onclick = () => {
   if (!pendingSel) return;
@@ -1422,7 +1882,9 @@ function currentLabel() {
 // 같은 맥·같은 서버라도 localhost 와 xxx.local 은 서로의 진도를 모른다.
 // 조용히 갈리면 알아채기 어려우니, 기준 주소가 아닐 때 한 번 알려준다.
 function warnIfSplitStorage() {
-  const CANON = ['localhost', '127.0.0.1'];
+  // 127.0.0.1 은 localhost 와 같은 서버지만 브라우저는 다른 사이트로 취급한다.
+  // 진도가 따로 쌓이므로 여기도 경고 대상이다 — 정상 주소는 localhost 하나뿐.
+  const CANON = ['localhost'];
   const isLocalServer = location.port === '8899';
   if (!isLocalServer || CANON.includes(location.hostname)) return;
   if (sessionStorage.getItem('originWarned')) return;
@@ -1501,14 +1963,40 @@ function hms(d) {
   return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1];
 }
 
+let booted = false;
+
 function route() {
   const h = location.hash.slice(1);
   seqStop();                       // 코너를 옮기면 재생 중인 음성은 끊는다
+
+  // 처음 열 때만, 마지막에 보던 코너로 돌려준다. 주소에 해시가 있으면 그쪽이 우선이고,
+  // 「유튜브 노트」를 눌러 해시를 비운 경우와 구별하려고 첫 진입에서만 적용한다.
+  if (!booted) {
+    booted = true;
+    if (!h) {
+      const last = localStorage.getItem('corner');
+      if (last === 'nhk' && NHK.length) { location.hash = 'nhk'; return; }
+      if (last === 'calls' && (CALLS || CALLS_LOCKED)) { location.hash = 'calls'; return; }
+      if (last === 'hard' || last === 'vocab') { location.hash = last; return; }
+    }
+  }
 
   // 동기화 링크로 들어온 경우. 해시를 지우고 나면 hashchange 가 다시 route 를 부른다.
   if (h.startsWith('sync=')) { consumeSyncHash(); return; }
 
   if (h === 'vocab') { setCorner('vocab'); renderVocab(); scrollTo(0, 0); return; }
+  if (h === 'hard') { setCorner('hard'); renderHard(); scrollTo(0, 0); return; }
+
+  // 회화 노트. 데이터가 아예 없는 빌드면 없는 코너처럼 군다.
+  if (h === 'calls' || h.startsWith('calls/')) {
+    if (!CALLS && !CALLS_LOCKED) { location.hash = ''; return; }
+    setCorner('calls');
+    if (!CALLS) { renderCallsLock(); scrollTo(0, 0); return; }
+    const c = h.startsWith('calls/') ? CALLS.find(x => x.id === h.slice(6)) : null;
+    c ? renderCallDetail(c) : renderCallsList();
+    scrollTo(0, 0);
+    return;
+  }
 
   // NHK 데이터가 없는 빌드(=공개본)에서는 그 코너가 존재하지 않는 것처럼 군다.
   // 빈 목록과 교재 안내문을 공개 페이지에 남길 이유가 없다.
@@ -1532,6 +2020,7 @@ addEventListener('storage', (e) => {
   if (e.key === DONE_KEY) doneMap = loadStore(DONE_KEY);
   else if (e.key === VOCAB_KEY) vocabMap = loadStore(VOCAB_KEY);
   else if (e.key === SPLIT_KEY) splitMap = loadStore(SPLIT_KEY);
+  else if (e.key === HARD_KEY) hardMap = loadStore(HARD_KEY);
   else return;
   if (curCue || seq.on) return;                      // 듣는 중엔 다시 그리지 않는다
   route();
@@ -1539,6 +2028,14 @@ addEventListener('storage', (e) => {
 
 route();
 warnIfSplitStorage();
+
+// 이 기기에서 기억해둔 회화 노트 암호가 있으면 조용히 푼다. 틀리면(암호를 바꾼 경우) 잊는다.
+if (!CALLS && CALLS_LOCKED && localStorage.getItem(CALLS_PASS_KEY)) {
+  decryptCalls(CALLS_LOCKED, localStorage.getItem(CALLS_PASS_KEY)).then(d => {
+    CALLS = d;
+    if (location.hash.startsWith('#calls')) route(); else updateCount(localStorage.getItem('corner') || 'yt');
+  }).catch(() => localStorage.removeItem(CALLS_PASS_KEY));
+}
 
 // 캐시된 교재 데이터를 쓰고 있었다면 조용히 최신으로 갈아끼운다.
 if (NHK.length) {
