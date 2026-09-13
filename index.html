@@ -147,7 +147,14 @@
   .fix .ctx-kr { display: block; font-size: 12.5px; }
   .clip-btn { padding: 3px 10px; font-size: 12px; }
   .clip-btn:disabled { opacity: .45; cursor: default; }
-  .fix.has-clip .jp { cursor: pointer; }
+  .fix .playable:not(.clip-btn) { cursor: pointer; }
+  .fix .playable:not(.clip-btn):hover { background: var(--accent-soft); border-radius: 6px; }
+  .fix .ctx .clip-btn { padding: 1px 8px; margin-right: 4px; vertical-align: middle; }
+  .fix-top .chk { margin-left: auto; }
+  .fix.done { opacity: .5; }
+  .fix.done:hover { opacity: 1; }
+  /* 후리가나가 한자보다 길 때 한자 사이가 벌어지지 않게 (예: 状況 → 「状  況」) */
+  ruby { ruby-align: center; }
   .fix.playing { border-color: var(--accent); }
   .fix.playing .clip-btn { background: var(--accent); color: #fff; border-color: var(--accent); }
   .lock { max-width: 340px; margin: 48px auto; text-align: center; }
@@ -622,7 +629,7 @@ function wireChecks(root, onChange) {
       const next = !isDone(kind, doneId);
       setDone(kind, doneId, next);
       btn.classList.toggle('on', next);
-      btn.closest('.item')?.classList.toggle('done', next);
+      btn.closest('.item, .fix')?.classList.toggle('done', next);
       onChange && onChange();
     };
   });
@@ -1678,7 +1685,8 @@ const callClipUrls = {};         // `${통화id}/${clipKey}` → 재생 주소
 addEventListener('hashchange', () => callAudio.pause());
 
 async function prepareCallAudio(c) {
-  const clips = c.steal.filter(s => s.clipKey);
+  // 📥 가져다 쓸 표현 + ✏️ 카드 속 「상대:」 줄
+  const clips = [...c.steal, ...c.fixes.map(f => f.ctx).filter(Boolean)].filter(s => s.clipKey);
   if (!clips.length) return false;
   if (typeof CALLS_DATA !== 'undefined') {           // 로컬: 파일이 옆에 있다
     clips.forEach(s => { callClipUrls[`${c.id}/${s.clipKey}`] = s.clip; });
@@ -1693,29 +1701,30 @@ async function prepareCallAudio(c) {
   return true;
 }
 
+// data-clip 이 붙은 것(▶ 버튼, 일본어 문장)을 누르면 그 조각을 튼다. 재생 중인 카드는 테두리로 표시.
 function wireCallClips(c) {
-  const cards = app.querySelectorAll('.fix.has-clip');
-  if (!cards.length) return;
-  const play = (card) => {
-    const url = callClipUrls[`${c.id}/${card.dataset.clip}`];
+  const els = app.querySelectorAll('[data-clip]');
+  if (!els.length) return;
+  const play = (el) => {
+    const url = callClipUrls[`${c.id}/${el.dataset.clip}`];
     if (!url) return;
+    const card = el.closest('.fix');
     app.querySelectorAll('.fix.playing').forEach(x => x.classList.remove('playing'));
-    card.classList.add('playing');
+    card?.classList.add('playing');
     callAudio.src = url;
     callAudio.currentTime = 0;
-    callAudio.play().catch(() => card.classList.remove('playing'));
-    callAudio.onended = () => card.classList.remove('playing');
+    callAudio.play().catch(() => card?.classList.remove('playing'));
+    callAudio.onended = () => card?.classList.remove('playing');
   };
   prepareCallAudio(c).then(ok => {
     if (!ok) return;
-    cards.forEach(card => {
-      const btn = card.querySelector('.clip-btn');
-      btn.disabled = false;
-      btn.onclick = (e) => { e.stopPropagation(); play(card); };
-      card.querySelector('.jp').onclick = () => play(card);
+    els.forEach(el => {
+      el.classList.add('playable');
+      if (el.matches('.clip-btn')) el.disabled = false;
+      el.onclick = (e) => { e.stopPropagation(); play(el); };
     });
   }).catch(() => {
-    cards.forEach(card => { card.querySelector('.clip-btn').textContent = '음성 못 불러옴'; });
+    app.querySelectorAll('.clip-btn').forEach(b => { b.textContent = '음성 못 불러옴'; });
   });
 }
 
@@ -1764,10 +1773,20 @@ function renderCallsList() {
 function renderCallDetail(c) {
   const byT = (a, b) => (a.t < b.t ? -1 : 1);
   const fixes = [...c.fixes].sort(byT);
+  // 카드마다 「확인함」 체크. 키는 원래 배열의 순번이다 — 화면은 시각순으로 정렬해 그리지만
+  // 데이터 파일의 순서는 그대로라 순번이 흔들리지 않는다. 기기 간 동기화도 기존 완료 표시와 같이 된다.
+  const arr = { fix: c.fixes, steal: c.steal, good: c.good };
+  const itemId = (sec, it) => `${c.id}:${sec}:${arr[sec].indexOf(it)}`;
+  const seen = sec => arr[sec].filter(it => isDone('callsItem', itemId(sec, it))).length;
+  const secLabel = {
+    fix: () => `✏️ 고칠 표현 ${seen('fix')}/${c.fixes.length}`,
+    steal: () => `📥 가져다 쓸 표현 ${seen('steal')}/${c.steal.length}`,
+    good: () => `👍 잘한 점 ${seen('good')}/${c.good.length}`,
+  };
   const secs = [
-    ['sec-fix', `✏️ 고칠 표현 ${fixes.length}`],
-    ['sec-steal', `📥 가져다 쓸 표현 ${c.steal.length}`],
-    ['sec-good', `👍 잘한 점 ${c.good.length}`],
+    ['sec-fix', secLabel.fix()],
+    ['sec-steal', secLabel.steal()],
+    ['sec-good', secLabel.good()],
     ['sec-vocab', `📖 새 단어 ${c.vocab.length}`],
     ['sec-stats', '📊 말버릇'],
   ];
@@ -1784,10 +1803,11 @@ function renderCallDetail(c) {
       <h3 class="call-sec" id="sec-fix">✏️ 고칠 표현</h3>
       <p class="hint">줄 친 쪽이 실제로 한 말, 굵은 쪽이 자연스러운 표현. 시각은 녹음 속 위치.</p>
       ${fixes.map(f => `
-        <div class="fix">
+        <div class="fix${isDone('callsItem', itemId('fix', f)) ? ' done' : ''}">
           <div class="fix-top"><span class="tsx">${esc(f.t)}</span><span class="tag">${esc(f.cat)}</span>
-            ${f.repeat_ts && f.repeat_ts.length ? `<span class="tag rep">★ ${f.repeat_ts.length + 1}번 · ${f.repeat_ts.map(esc).join(', ')}</span>` : ''}</div>
-          ${f.ctx ? `<p class="ctx">상대: <span class="jp">${ruby(f.ctx.jp)}</span><span class="ctx-kr">${esc(f.ctx.kr || '')}</span></p>` : ''}
+            ${f.repeat_ts && f.repeat_ts.length ? `<span class="tag rep">★ ${f.repeat_ts.length + 1}번 · ${f.repeat_ts.map(esc).join(', ')}</span>` : ''}
+            ${checkBtn('callsItem', itemId('fix', f))}</div>
+          ${f.ctx ? `<p class="ctx">상대: ${f.ctx.clipKey ? `<button class="clip-btn" data-clip="${esc(f.ctx.clipKey)}" disabled>▶</button>` : ''}<span class="jp"${f.ctx.clipKey ? ` data-clip="${esc(f.ctx.clipKey)}"` : ''}>${ruby(f.ctx.jp)}</span><span class="ctx-kr">${esc(f.ctx.kr || '')}</span></p>` : ''}
           <p class="lbl">내가 한 말</p>
           <p class="jp said-full">${hl(f.said_full || f.said, f.said, 'bad')}</p>
           <p class="lbl">자연스럽게</p>
@@ -1799,18 +1819,19 @@ function renderCallDetail(c) {
       <h3 class="call-sec" id="sec-steal">📥 가져다 쓸 표현</h3>
       <p class="hint">상대가 쓴 자연스러운 표현. 「번역 가리기」를 켜면 뜻을 가리고 떠올려볼 수 있다.</p>
       ${[...c.steal].sort(byT).map(s => `
-        <div class="fix${s.clipKey ? ' has-clip' : ''}"${s.clipKey ? ` data-clip="${esc(s.clipKey)}"` : ''}>
+        <div class="fix${isDone('callsItem', itemId('steal', s)) ? ' done' : ''}">
           <div class="fix-top"><span class="tsx">${esc(s.t)}</span>
-            ${s.clipKey ? '<button class="clip-btn" disabled>▶ 듣기</button>' : ''}</div>
-          <p class="jp nat">${hl(s.jp_full || s.jp, s.jp, 'good')}</p>
+            ${s.clipKey ? `<button class="clip-btn" data-clip="${esc(s.clipKey)}" disabled>▶ 듣기</button>` : ''}
+            ${checkBtn('callsItem', itemId('steal', s))}</div>
+          <p class="jp nat"${s.clipKey ? ` data-clip="${esc(s.clipKey)}"` : ''}>${hl(s.jp_full || s.jp, s.jp, 'good')}</p>
           <p class="kr">${esc(s.kr)}</p>
           ${s.note ? `<p class="why">${esc(s.note)}</p>` : ''}
         </div>`).join('')}
 
       <h3 class="call-sec" id="sec-good">👍 잘한 점</h3>
       ${[...c.good].sort(byT).map(g => `
-        <div class="fix">
-          <div class="fix-top"><span class="tsx">${esc(g.t)}</span></div>
+        <div class="fix${isDone('callsItem', itemId('good', g)) ? ' done' : ''}">
+          <div class="fix-top"><span class="tsx">${esc(g.t)}</span>${checkBtn('callsItem', itemId('good', g))}</div>
           <p class="jp">${hl(g.jp_full || g.jp, g.jp, 'good')}</p>
           ${g.kr ? `<p class="kr">${esc(g.kr)}</p>` : ''}
           <p class="why">${esc(g.why)}</p>
@@ -1832,6 +1853,13 @@ function renderCallDetail(c) {
       ${doneBar('calls', c.id, '이 회화 복습 완료로 표시')}
     </div>`;
 
+  // 카드 체크 → 위쪽 이동 버튼의 「확인 n/전체」를 바로 갱신. 복습 완료 막대는 따로 묶으므로 뒤에 건다.
+  wireChecks(app, () => {
+    for (const sec of ['fix', 'steal', 'good']) {
+      const b = app.querySelector(`[data-go="sec-${sec}"]`);
+      if (b) b.textContent = secLabel[sec]();
+    }
+  });
   wireDoneBar('calls', c.id, '이 회화 복습 완료로 표시');
   wireCallClips(c);
   app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
