@@ -152,6 +152,14 @@
   .key b { font-size: 14.5px; margin-right: 3px; }
   body:not(.no-furi) .key b { line-height: 1.9; }
   .fix .said-full { color: var(--muted); }
+  /* 🧱 카드: 실제로 한 말을 조각별로 판정 (✅ 맞음 · 🔸 어색 · ❌ 틀림) */
+  .parts { list-style: none; padding: 0; margin: 6px 0 2px; }
+  .parts li { display: grid; grid-template-columns: 20px 1fr; column-gap: 6px; padding: 6px 0;
+    border-top: 1px dashed var(--stroke); }
+  .parts .pv { font-size: 13px; line-height: 1.9; }
+  .parts .jp { font-size: 14.5px; margin: 0; }
+  .parts .p-bad .jp { text-decoration: underline wavy rgba(210,70,70,.75); text-underline-offset: 5px; }
+  .parts .pw { grid-column: 2; font-size: 13px; color: var(--muted); margin-top: 1px; }
   .fix .bad { text-decoration: underline wavy rgba(210,70,70,.75); text-underline-offset: 5px; color: var(--text); }
   .fix .good { background: var(--accent-soft); border-radius: 5px; padding: 0 2px; }
   .fix .ctx { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
@@ -1800,6 +1808,8 @@ function renderCallsList() {
   wireChecks(app, () => updateCount('calls'));
 }
 
+const PART_ICON = { ok: '✅', meh: '🔸', bad: '❌' };   // 맞음 · 뜻은 통하지만 어색 · 틀림(뜻이 바뀌거나 문법 오류)
+
 function renderCallDetail(c) {
   const byT = (a, b) => (a.t < b.t ? -1 : 1);
   const fixes = [...c.fixes].sort(byT);
@@ -1855,7 +1865,7 @@ function renderCallDetail(c) {
 
       ${stuck.length ? `
       <h3 class="call-sec" id="sec-stuck">🧱 막힌 순간</h3>
-      <p class="hint">말하려다 막힌 곳. 그때 떠올리지 못한 말이 아래 칩에 있다.</p>
+      <p class="hint">말하려다 막힌 곳. 실제로 한 말은 조각마다 ✅ 맞음 · 🔸 통하지만 어색 · ❌ 틀림으로 나눴다. 그때 떠올리지 못한 말이 아래 칩에 있다.</p>
       ${stuck.map(s => `
         <div class="fix${isDone('callsItem', itemId('stuck', s)) ? ' done' : ''}">
           <div class="fix-top"><span class="tsx">${esc(s.t)}</span><span class="tag">${esc(s.signal || '')}</span>
@@ -1865,6 +1875,9 @@ function renderCallDetail(c) {
           <p class="wanted">${esc(s.wanted || '')}</p>
           <p class="lbl">실제로 한 말</p>
           <p class="jp said-full">${ruby(s.said_full || '')}</p>
+          ${s.parts && s.parts.length ? `
+          <p class="lbl">어디가 맞고 어디가 틀렸나</p>
+          <ul class="parts">${s.parts.map(p => `<li class="p-${esc(p.v)}"><span class="pv">${PART_ICON[p.v] || ''}</span><span class="jp">${ruby(p.jp)}</span><span class="pw">${esc(p.why)}</span></li>`).join('')}</ul>` : ''}
           <p class="lbl">이렇게 말하면 됨</p>
           <p class="jp nat">${ruby(s.natural_full || '')}</p>
           ${s.kr ? `<p class="kr">${esc(s.kr)}</p>` : ''}
