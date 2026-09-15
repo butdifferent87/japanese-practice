@@ -1809,6 +1809,10 @@ function renderCallsList() {
 }
 
 const PART_ICON = { ok: '✅', meh: '🔸', bad: '❌' };   // 맞음 · 뜻은 통하지만 어색 · 틀림(뜻이 바뀌거나 문법 오류)
+// ✏️·🧱 카드: 실제로 한 말을 조각마다 판정한 목록. 맞은 조각도 보여 줘야 "어디까지 맞았는지"가 보인다.
+const partsList = parts => parts && parts.length ? `
+          <p class="lbl">어디가 맞고 어디가 틀렸나</p>
+          <ul class="parts">${parts.map(p => `<li class="p-${esc(p.v)}"><span class="pv">${PART_ICON[p.v] || ''}</span><span class="jp">${ruby(p.jp)}</span><span class="pw">${esc(p.why)}</span></li>`).join('')}</ul>` : '';
 
 function renderCallDetail(c) {
   const byT = (a, b) => (a.t < b.t ? -1 : 1);
@@ -1857,6 +1861,7 @@ function renderCallDetail(c) {
           ${f.ctx ? `<p class="ctx">상대: ${f.ctx.clipKey ? `<button class="clip-btn" data-clip="${esc(f.ctx.clipKey)}" disabled>▶</button>` : ''}<span class="jp"${f.ctx.clipKey ? ` data-clip="${esc(f.ctx.clipKey)}"` : ''}>${ruby(f.ctx.jp)}</span><span class="ctx-kr">${esc(f.ctx.kr || '')}</span></p>` : ''}
           <p class="lbl">내가 한 말</p>
           <p class="jp said-full">${hl(f.said_full || f.said, f.said, 'bad')}</p>
+          ${partsList(f.parts)}
           <p class="lbl">자연스럽게</p>
           <p class="jp nat">${hl(f.natural_full || f.natural, f.natural, 'good')}</p>
           ${f.kr ? `<p class="kr">${esc(f.kr)}</p>` : ''}
@@ -1875,9 +1880,7 @@ function renderCallDetail(c) {
           <p class="wanted">${esc(s.wanted || '')}</p>
           <p class="lbl">실제로 한 말</p>
           <p class="jp said-full">${ruby(s.said_full || '')}</p>
-          ${s.parts && s.parts.length ? `
-          <p class="lbl">어디가 맞고 어디가 틀렸나</p>
-          <ul class="parts">${s.parts.map(p => `<li class="p-${esc(p.v)}"><span class="pv">${PART_ICON[p.v] || ''}</span><span class="jp">${ruby(p.jp)}</span><span class="pw">${esc(p.why)}</span></li>`).join('')}</ul>` : ''}
+          ${partsList(s.parts)}
           <p class="lbl">이렇게 말하면 됨</p>
           <p class="jp nat">${ruby(s.natural_full || '')}</p>
           ${s.kr ? `<p class="kr">${esc(s.kr)}</p>` : ''}
