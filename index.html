@@ -171,6 +171,17 @@
   .fix .playable:not(.clip-btn):hover { background: var(--accent-soft); border-radius: 6px; }
   .fix .ctx .clip-btn { padding: 1px 8px; margin-right: 4px; vertical-align: middle; }
   .fix-top .chk { margin-left: auto; }
+  /* 카드 오른쪽 위: ★ 별표 + ✓ 확인 */
+  .fix-top .tools { margin-left: auto; display: flex; gap: 6px; }
+  .fix-top .tools .chk { margin-left: 0; }
+  .star { flex: none; width: 26px; height: 26px; padding: 0; border-radius: 8px; display: grid; place-items: center;
+    font-size: 14px; line-height: 1; color: var(--muted); background: var(--card); }
+  .star.on { background: #F2B01E; border-color: #F2B01E; color: #fff; }
+  .starall { display: block; width: 100%; margin: 0 0 12px; padding: 11px 14px; font-weight: 700; text-align: left; }
+  .star-grp { font-size: 12.5px; font-weight: 700; color: var(--muted); margin: 14px 0 6px; }
+  .star-call-h { font-size: 15px; margin: 18px 0 2px; }
+  .vocabcard .fix-top b.jp { font-size: 18px; }
+  .vocabcard .mn { margin: 4px 0 0; }
   .fix.done { opacity: .5; }
   .fix.done:hover { opacity: 1; }
   /* 후리가나가 한자보다 길 때 한자 사이가 벌어지지 않게 (예: 状況 → 「状  況」) */
@@ -1736,8 +1747,8 @@ async function prepareCallAudio(c) {
 }
 
 // data-clip 이 붙은 것(▶ 버튼, 일본어 문장)을 누르면 그 조각을 튼다. 재생 중인 카드는 테두리로 표시.
-function wireCallClips(c) {
-  const els = app.querySelectorAll('[data-clip]');
+function wireCallClips(c, root = app) {
+  const els = root.querySelectorAll('[data-clip]');
   if (!els.length) return;
   const play = (el) => {
     const k = `${c.id}/${el.dataset.clip}`;
@@ -1762,7 +1773,7 @@ function wireCallClips(c) {
       el.onclick = (e) => { e.stopPropagation(); play(el); };
     });
   }).catch(() => {
-    app.querySelectorAll('.clip-btn').forEach(b => { b.textContent = '음성 못 불러옴'; });
+    root.querySelectorAll('.clip-btn').forEach(b => { b.textContent = '음성 못 불러옴'; });
   });
 }
 
@@ -1795,16 +1806,20 @@ function renderCallsLock() {
 }
 
 function renderCallsList() {
-  app.innerHTML = CALLS.length ? '<div class="grid">' + CALLS.map(c => `
+  const starN = callStarTotal();
+  app.innerHTML = (starN ? `<button class="starall" data-go-star>⭐ 별표 모음 ${starN}</button>` : '') +
+    (CALLS.length ? '<div class="grid">' + CALLS.map(c => `
     <div class="item plain${isDone('calls', c.id) ? ' done' : ''}" data-id="${esc(c.id)}">
       <div>
         <div class="rowtop"><h2>${esc(c.title)}</h2>${checkBtn('calls', c.id)}</div>
         <div class="meta"><span>${esc(c.date)}</span><span>${esc(c.duration)}</span><span>${esc(c.with || '')}</span></div>
-        <p>고칠 표현 ${c.fixes.length}${c.stuck ? ` · 막힌 순간 ${c.stuck.length}` : ''}${c.missed ? ` · 못 알아들은 순간 ${c.missed.length}` : ''} · 가져다 쓸 표현 ${c.steal.length} · 새 단어 ${c.vocab.length}</p>
+        <p>고칠 표현 ${c.fixes.length}${c.stuck ? ` · 막힌 순간 ${c.stuck.length}` : ''}${c.missed ? ` · 못 알아들은 순간 ${c.missed.length}` : ''} · 가져다 쓸 표현 ${c.steal.length} · 새 단어 ${c.vocab.length}${callStars(c).length ? ` · ⭐ ${callStars(c).length}` : ''}</p>
       </div>
     </div>`).join('') + '</div>'
-    : '<p class="empty">아직 회화 노트 없음.</p>';
+    : '<p class="empty">아직 회화 노트 없음.</p>');
   app.querySelectorAll('.item').forEach(el => el.onclick = () => { location.hash = 'calls/' + el.dataset.id; });
+  const sa = app.querySelector('[data-go-star]');
+  if (sa) sa.onclick = () => { location.hash = 'calls/star'; };
   wireChecks(app, () => updateCount('calls'));
 }
 
@@ -1814,50 +1829,33 @@ const partsList = parts => parts && parts.length ? `
           <p class="lbl">어디가 맞고 어디가 틀렸나</p>
           <ul class="parts">${parts.map(p => `<li class="p-${esc(p.v)}"><span class="pv">${PART_ICON[p.v] || ''}</span><span class="jp">${ruby(p.jp)}</span><span class="pw">${esc(p.why)}</span></li>`).join('')}</ul>` : '';
 
-function renderCallDetail(c) {
-  const byT = (a, b) => (a.t < b.t ? -1 : 1);
-  const fixes = [...c.fixes].sort(byT);
-  // 카드마다 「확인함」 체크. 키는 원래 배열의 순번이다 — 화면은 시각순으로 정렬해 그리지만
-  // 데이터 파일의 순서는 그대로라 순번이 흔들리지 않는다. 기기 간 동기화도 기존 완료 표시와 같이 된다.
-  const stuck = [...(c.stuck || [])].sort(byT), missed = [...(c.missed || [])].sort(byT);
-  const arr = { fix: c.fixes, steal: c.steal, good: c.good, stuck: c.stuck || [], missed: c.missed || [] };
-  const itemId = (sec, it) => `${c.id}:${sec}:${arr[sec].indexOf(it)}`;
-  const seen = sec => arr[sec].filter(it => isDone('callsItem', itemId(sec, it))).length;
-  const secLabel = {
-    fix: () => `✏️ 고칠 표현 ${seen('fix')}/${c.fixes.length}`,
-    stuck: () => `🧱 막힌 순간 ${seen('stuck')}/${arr.stuck.length}`,
-    missed: () => `👂 못 알아들은 순간 ${seen('missed')}/${arr.missed.length}`,
-    steal: () => `📥 가져다 쓸 표현 ${seen('steal')}/${c.steal.length}`,
-    good: () => `👍 잘한 점 ${seen('good')}/${c.good.length}`,
-  };
-  const secs = [
-    ['sec-fix', secLabel.fix()],
-    ...(arr.stuck.length ? [['sec-stuck', secLabel.stuck()]] : []),
-    ...(arr.missed.length ? [['sec-missed', secLabel.missed()]] : []),
-    ['sec-steal', secLabel.steal()],
-    ['sec-good', secLabel.good()],
-    ['sec-vocab', `📖 새 단어 ${c.vocab.length}`],
-    ['sec-stats', '📊 말버릇'],
-  ];
-  const keys = ks => ks && ks.length
-    ? `<div class="keys">${ks.map(k => `<span class="key"><b class="jp">${ruby(k.jp)}</b> ${esc(k.kr || '')}</span>`).join('')}</div>` : '';
-  app.innerHTML = `
-    <button class="back">← 회화 목록</button>
-    <div class="detail">
-      <h2>${esc(c.title)}</h2>
-      <div class="meta"><span>${esc(c.date)}</span><span>${esc(c.duration)}</span><span>${esc(c.with || '')}</span></div>
-      <div class="jump">${secs.map(([id, label]) => `<button data-go="${id}">${label}</button>`).join('')}</div>
+// ---- 회화 노트 카드 ----
+// 카드 id = `${통화id}:${칸}:${원래 배열 순번}`. 화면은 시각순으로 정렬해 그리지만 데이터 파일의 순서는
+// 그대로라 순번이 흔들리지 않는다. ✓(callsItem)와 ★(callsStar)는 같은 id 로 완료 저장소에 들어가서
+// 기기 간 동기화도 기존 완료 표시와 같이 된다.
+const CALL_SECS = [   // [칸, 데이터 키, 제목]
+  ['fix', 'fixes', '✏️ 고칠 표현'], ['stuck', 'stuck', '🧱 막힌 순간'], ['missed', 'missed', '👂 못 알아들은 순간'],
+  ['steal', 'steal', '📥 가져다 쓸 표현'], ['good', 'good', '👍 잘한 점'], ['vocab', 'vocab', '📖 새 단어'],
+];
+const callArr = (c, sec) => c[CALL_SECS.find(([s]) => s === sec)[1]] || [];
+const callItemId = (c, sec, it) => `${c.id}:${sec}:${callArr(c, sec).indexOf(it)}`;
+const isStar = id => isDone('callsStar', id);
+const callStars = c => CALL_SECS.flatMap(([sec]) => callArr(c, sec).filter(it => isStar(callItemId(c, sec, it))));
+const callStarTotal = () => (CALLS || []).reduce((n, c) => n + callStars(c).length, 0);
+const byT = (a, b) => ((a.t || '') < (b.t || '') ? -1 : 1);
 
-      <h3 class="call-sec">🔁 반복되는 실수</h3>
-      <ul class="patterns">${c.patterns.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+const starBtn = id => `<button class="star${isStar(id) ? ' on' : ''}" data-star-id="${esc(id)}" title="별표 — ⭐ 칸에 모인다">★</button>`;
+const cardTools = (c, sec, it) => { const id = callItemId(c, sec, it); return `<span class="tools">${starBtn(id)}${checkBtn('callsItem', id)}</span>`; };
+const cardCls = (c, sec, it) => (isDone('callsItem', callItemId(c, sec, it)) ? ' done' : '');
+const keysHtml = ks => ks && ks.length
+  ? `<div class="keys">${ks.map(k => `<span class="key"><b class="jp">${ruby(k.jp)}</b> ${esc(k.kr || '')}</span>`).join('')}</div>` : '';
 
-      <h3 class="call-sec" id="sec-fix">✏️ 고칠 표현</h3>
-      <p class="hint">줄 친 쪽이 실제로 한 말, 굵은 쪽이 자연스러운 표현. 시각은 녹음 속 위치.</p>
-      ${fixes.map(f => `
-        <div class="fix${isDone('callsItem', itemId('fix', f)) ? ' done' : ''}">
+const CARD = {
+  fix: (c, f) => `
+        <div class="fix${cardCls(c, 'fix', f)}">
           <div class="fix-top"><span class="tsx">${esc(f.t)}</span><span class="tag">${esc(f.cat)}</span>
             ${f.repeat_ts && f.repeat_ts.length ? `<span class="tag rep">★ ${f.repeat_ts.length + 1}번 · ${f.repeat_ts.map(esc).join(', ')}</span>` : ''}
-            ${checkBtn('callsItem', itemId('fix', f))}</div>
+            ${cardTools(c, 'fix', f)}</div>
           ${f.ctx ? `<p class="ctx">상대: ${f.ctx.clipKey ? `<button class="clip-btn" data-clip="${esc(f.ctx.clipKey)}" disabled>▶</button>` : ''}<span class="jp"${f.ctx.clipKey ? ` data-clip="${esc(f.ctx.clipKey)}"` : ''}>${ruby(f.ctx.jp)}</span><span class="ctx-kr">${esc(f.ctx.kr || '')}</span></p>` : ''}
           <p class="lbl">내가 한 말</p>
           <p class="jp said-full">${hl(f.said_full || f.said, f.said, 'bad')}</p>
@@ -1866,15 +1864,11 @@ function renderCallDetail(c) {
           <p class="jp nat">${hl(f.natural_full || f.natural, f.natural, 'good')}</p>
           ${f.kr ? `<p class="kr">${esc(f.kr)}</p>` : ''}
           <p class="why">${esc(f.why)}</p>
-        </div>`).join('')}
-
-      ${stuck.length ? `
-      <h3 class="call-sec" id="sec-stuck">🧱 막힌 순간</h3>
-      <p class="hint">말하려다 막힌 곳. 실제로 한 말은 조각마다 ✅ 맞음 · 🔸 통하지만 어색 · ❌ 틀림으로 나눴다. 그때 떠올리지 못한 말이 아래 칩에 있다.</p>
-      ${stuck.map(s => `
-        <div class="fix${isDone('callsItem', itemId('stuck', s)) ? ' done' : ''}">
+        </div>`,
+  stuck: (c, s) => `
+        <div class="fix${cardCls(c, 'stuck', s)}">
           <div class="fix-top"><span class="tsx">${esc(s.t)}</span><span class="tag">${esc(s.signal || '')}</span>
-            ${checkBtn('callsItem', itemId('stuck', s))}</div>
+            ${cardTools(c, 'stuck', s)}</div>
           ${s.ctx ? `<p class="ctx">상대: <span class="jp">${ruby(s.ctx.jp)}</span><span class="ctx-kr">${esc(s.ctx.kr || '')}</span></p>` : ''}
           <p class="lbl">하려던 말</p>
           <p class="wanted">${esc(s.wanted || '')}</p>
@@ -1884,52 +1878,132 @@ function renderCallDetail(c) {
           <p class="lbl">이렇게 말하면 됨</p>
           <p class="jp nat">${ruby(s.natural_full || '')}</p>
           ${s.kr ? `<p class="kr">${esc(s.kr)}</p>` : ''}
-          ${keys(s.key)}
-        </div>`).join('')}` : ''}
-
-      ${missed.length ? `
-      <h3 class="call-sec" id="sec-missed">👂 못 알아들은 순간</h3>
-      <p class="hint">상대 말을 놓친 곳. 「번역 가리기」를 켜고 ▶로 먼저 들어본 뒤 뜻을 확인해보자.</p>
-      ${missed.map(m => `
-        <div class="fix${isDone('callsItem', itemId('missed', m)) ? ' done' : ''}">
+          ${keysHtml(s.key)}
+        </div>`,
+  missed: (c, m) => `
+        <div class="fix${cardCls(c, 'missed', m)}">
           <div class="fix-top"><span class="tsx">${esc(m.t)}</span><span class="tag">${esc(m.cause || '')}</span>
             ${m.clipKey ? `<button class="clip-btn" data-clip="${esc(m.clipKey)}" disabled>▶ 듣기</button>` : ''}
-            ${checkBtn('callsItem', itemId('missed', m))}</div>
+            ${cardTools(c, 'missed', m)}</div>
           <p class="jp nat"${m.clipKey ? ` data-clip="${esc(m.clipKey)}"` : ''}>${ruby(m.jp_full || '')}</p>
           <p class="kr">${esc(m.kr || '')}</p>
-          ${keys(m.key)}
+          ${keysHtml(m.key)}
           ${m.how ? `<p class="why">${esc(m.how)}</p>` : ''}
-        </div>`).join('')}` : ''}
-
-      <h3 class="call-sec" id="sec-steal">📥 가져다 쓸 표현</h3>
-      <p class="hint">상대가 쓴 자연스러운 표현. 「번역 가리기」를 켜면 뜻을 가리고 떠올려볼 수 있다.</p>
-      ${[...c.steal].sort(byT).map(s => `
-        <div class="fix${isDone('callsItem', itemId('steal', s)) ? ' done' : ''}">
+        </div>`,
+  steal: (c, s) => `
+        <div class="fix${cardCls(c, 'steal', s)}">
           <div class="fix-top"><span class="tsx">${esc(s.t)}</span>
             ${s.clipKey ? `<button class="clip-btn" data-clip="${esc(s.clipKey)}" disabled>▶ 듣기</button>` : ''}
-            ${checkBtn('callsItem', itemId('steal', s))}</div>
+            ${cardTools(c, 'steal', s)}</div>
           <p class="jp nat"${s.clipKey ? ` data-clip="${esc(s.clipKey)}"` : ''}>${hl(s.jp_full || s.jp, s.jp, 'good')}</p>
           <p class="kr">${esc(s.kr)}</p>
           ${s.note ? `<p class="why">${esc(s.note)}</p>` : ''}
-        </div>`).join('')}
-
-      <h3 class="call-sec" id="sec-good">👍 잘한 점</h3>
-      ${[...c.good].sort(byT).map(g => `
-        <div class="fix${isDone('callsItem', itemId('good', g)) ? ' done' : ''}">
-          <div class="fix-top"><span class="tsx">${esc(g.t)}</span>${checkBtn('callsItem', itemId('good', g))}</div>
+        </div>`,
+  good: (c, g) => `
+        <div class="fix${cardCls(c, 'good', g)}">
+          <div class="fix-top"><span class="tsx">${esc(g.t)}</span>${cardTools(c, 'good', g)}</div>
           <p class="jp">${hl(g.jp_full || g.jp, g.jp, 'good')}</p>
           ${g.kr ? `<p class="kr">${esc(g.kr)}</p>` : ''}
           <p class="why">${esc(g.why)}</p>
-        </div>`).join('')}
+        </div>`,
+  vocab: (c, v) => `
+        <div class="fix vocabcard${cardCls(c, 'vocab', v)}">
+          <div class="fix-top"><b class="jp">${ruby(v.jp)}</b>${cardTools(c, 'vocab', v)}</div>
+          <p class="mn">${esc(v.kr)}</p>
+          <p class="why">${v.t ? esc(v.t) + ' · ' : ''}${esc(v.context || '')}</p>
+        </div>`,
+};
+
+// ★ 누르기. 별표 칸 안에서 해제해도 카드는 그 자리에 두고(누르자마자 사라지면 되돌리기 어렵다) 표시만 끈다.
+function wireStars(root, onChange) {
+  root.querySelectorAll('.star').forEach(btn => {
+    btn.onclick = e => {
+      e.stopPropagation();
+      const id = btn.dataset.starId, next = !isStar(id);
+      setDone('callsStar', id, next);
+      // 같은 카드가 다른 칸(별표 칸 ↔ 원래 칸)에도 그려져 있으면 같이 켠다
+      app.querySelectorAll(`.star[data-star-id="${CSS.escape(id)}"]`).forEach(b => b.classList.toggle('on', next));
+      onChange && onChange();
+    };
+  });
+}
+// ✓ 도 같은 카드가 두 곳에 있을 수 있어 둘 다 맞춘다(wireChecks 는 누른 카드만 바꾼다).
+function syncChecks(root) {
+  root.querySelectorAll('.chk[data-kind="callsItem"]').forEach(b => {
+    const on = isDone('callsItem', b.dataset.doneId);
+    b.classList.toggle('on', on);
+    b.closest('.fix')?.classList.toggle('done', on);
+  });
+}
+
+// 별표한 카드를 칸별로 묶어 그린다.
+function starCardsHtml(c) {
+  const groups = CALL_SECS.map(([sec, , title]) => {
+    const its = callArr(c, sec).filter(it => isStar(callItemId(c, sec, it))).sort(byT);
+    return its.length ? `<p class="star-grp">${title} ${its.length}</p>${its.map(it => CARD[sec](c, it)).join('')}` : '';
+  }).join('');
+  return groups;
+}
+const wireKr = root => root.querySelectorAll('.kr').forEach(p => p.onclick = () => p.classList.toggle('reveal'));
+
+function renderCallDetail(c) {
+  const seen = sec => callArr(c, sec).filter(it => isDone('callsItem', callItemId(c, sec, it))).length;
+  const secLabel = {
+    fix: () => `✏️ 고칠 표현 ${seen('fix')}/${c.fixes.length}`,
+    stuck: () => `🧱 막힌 순간 ${seen('stuck')}/${callArr(c, 'stuck').length}`,
+    missed: () => `👂 못 알아들은 순간 ${seen('missed')}/${callArr(c, 'missed').length}`,
+    steal: () => `📥 가져다 쓸 표현 ${seen('steal')}/${c.steal.length}`,
+    good: () => `👍 잘한 점 ${seen('good')}/${c.good.length}`,
+    vocab: () => `📖 새 단어 ${seen('vocab')}/${c.vocab.length}`,
+    star: () => `⭐ 별표 ${callStars(c).length}`,
+  };
+  const secs = [
+    ['sec-star', secLabel.star()],
+    ['sec-fix', secLabel.fix()],
+    ...(callArr(c, 'stuck').length ? [['sec-stuck', secLabel.stuck()]] : []),
+    ...(callArr(c, 'missed').length ? [['sec-missed', secLabel.missed()]] : []),
+    ['sec-steal', secLabel.steal()],
+    ['sec-good', secLabel.good()],
+    ['sec-vocab', secLabel.vocab()],
+    ['sec-stats', '📊 말버릇'],
+  ];
+  const list = sec => [...callArr(c, sec)].sort(byT).map(it => CARD[sec](c, it)).join('');
+  app.innerHTML = `
+    <button class="back">← 회화 목록</button>
+    <div class="detail">
+      <h2>${esc(c.title)}</h2>
+      <div class="meta"><span>${esc(c.date)}</span><span>${esc(c.duration)}</span><span>${esc(c.with || '')}</span></div>
+      <div class="jump">${secs.map(([id, label]) => `<button data-go="${id}">${label}</button>`).join('')}</div>
+
+      <h3 class="call-sec" id="sec-star">⭐ 별표</h3>
+      <div class="star-body"></div>
+
+      <h3 class="call-sec">🔁 반복되는 실수</h3>
+      <ul class="patterns">${c.patterns.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+
+      <h3 class="call-sec" id="sec-fix">✏️ 고칠 표현</h3>
+      <p class="hint">줄 친 쪽이 실제로 한 말, 굵은 쪽이 자연스러운 표현. 시각은 녹음 속 위치. ★를 누르면 ⭐ 칸에 모인다.</p>
+      ${list('fix')}
+
+      ${callArr(c, 'stuck').length ? `
+      <h3 class="call-sec" id="sec-stuck">🧱 막힌 순간</h3>
+      <p class="hint">말하려다 막힌 곳. 실제로 한 말은 조각마다 ✅ 맞음 · 🔸 통하지만 어색 · ❌ 틀림으로 나눴다. 그때 떠올리지 못한 말이 아래 칩에 있다.</p>
+      ${list('stuck')}` : ''}
+
+      ${callArr(c, 'missed').length ? `
+      <h3 class="call-sec" id="sec-missed">👂 못 알아들은 순간</h3>
+      <p class="hint">상대 말을 놓친 곳. 「번역 가리기」를 켜고 ▶로 먼저 들어본 뒤 뜻을 확인해보자.</p>
+      ${list('missed')}` : ''}
+
+      <h3 class="call-sec" id="sec-steal">📥 가져다 쓸 표현</h3>
+      <p class="hint">상대가 쓴 자연스러운 표현. 「번역 가리기」를 켜면 뜻을 가리고 떠올려볼 수 있다.</p>
+      ${list('steal')}
+
+      <h3 class="call-sec" id="sec-good">👍 잘한 점</h3>
+      ${list('good')}
 
       <h3 class="call-sec" id="sec-vocab">📖 새 단어</h3>
-      <div class="notes">${c.vocab.map(v => `
-        <div class="note">
-          <b class="jp">${ruby(v.jp)}</b>
-          <p class="mn">${esc(v.kr)}</p>
-          <p class="pt">${v.t ? esc(v.t) + ' · ' : ''}${esc(v.context || '')}</p>
-        </div>`).join('')}
-      </div>
+      ${callArr(c, 'vocab').map(v => CARD.vocab(c, v)).join('')}
 
       <h3 class="call-sec" id="sec-stats">📊 말버릇 (통화 전체)</h3>
       <div class="stats">${(c.stats || []).map(s => `
@@ -1938,13 +2012,19 @@ function renderCallDetail(c) {
       ${doneBar('calls', c.id, '이 회화 복습 완료로 표시')}
     </div>`;
 
-  // 카드 체크 → 위쪽 이동 버튼의 「확인 n/전체」를 바로 갱신. 복습 완료 막대는 따로 묶으므로 뒤에 건다.
-  wireChecks(app, () => {
-    for (const sec of ['fix', 'stuck', 'missed', 'steal', 'good']) {
+  // 카드 체크·별표 → 위쪽 칩의 「n/전체」「⭐ n」을 바로 갱신
+  const relabel = () => {
+    for (const sec of Object.keys(secLabel)) {
       const b = app.querySelector(`[data-go="sec-${sec}"]`);
       if (b) b.textContent = secLabel[sec]();
     }
-  });
+  };
+  const wireCards = root => {
+    wireChecks(root, () => { syncChecks(app); relabel(); });
+    wireStars(root, relabel);
+    wireKr(root);
+  };
+  wireCards(app);
   wireDoneBar('calls', c.id, '이 회화 복습 완료로 표시');
   wireCallClips(c);
   app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
@@ -1958,6 +2038,7 @@ function renderCallDetail(c) {
   for (const el of [...detail.children]) {
     if (el === jump || el.matches('h2, .meta, .donebar')) continue;
     if (el.matches('h3.call-sec[id]')) cur = el.id;
+    else if (el.matches('h3.call-sec') && cur === 'sec-star') cur = 'sec-fix';   // 🔁 반복 실수는 ✏️ 칸 머리에
     if (!panels[cur]) { panels[cur] = document.createElement('section'); panels[cur].className = 'call-panel'; }
     panels[cur].append(el);
   }
@@ -1968,7 +2049,15 @@ function renderCallDetail(c) {
   if (bar) anchor.after(bar);
   // 칩 줄은 헤더 바로 아래에 붙어 있게(스크롤해도 칩을 누를 수 있게)
   jump.style.top = document.querySelector('header').offsetHeight + 'px';
+  // ⭐ 칸은 열 때마다 새로 그린다 — 다른 칸에서 방금 누른 별표까지 반영되게
+  const drawStars = () => {
+    const body = panels['sec-star'].querySelector('.star-body');
+    body.innerHTML = starCardsHtml(c) || '<p class="empty">아직 별표한 카드가 없다. 카드 오른쪽 위 ★를 누르면 여기로 모인다.</p>';
+    wireCards(body);
+    wireCallClips(c, body);
+  };
   const showTab = (id) => {
+    if (id === 'sec-star') drawStars();
     for (const [k, p] of Object.entries(panels)) p.hidden = k !== id;
     jump.querySelectorAll('[data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === id));
     localStorage.setItem('callsTab', id);
@@ -1978,8 +2067,31 @@ function renderCallDetail(c) {
   };
   jump.querySelectorAll('[data-go]').forEach(b => b.onclick = () => showTab(b.dataset.go));
   const saved = localStorage.getItem('callsTab');
-  showTab(panels[saved] ? saved : order[0]);
-  app.querySelectorAll('.kr').forEach(p => p.onclick = () => p.classList.toggle('reveal'));
+  showTab(panels[saved] ? saved : 'sec-fix');
+}
+
+// ⭐ 별표 모음 — 모든 통화에서 별표한 카드를 통화별로 모아 본다.
+function renderCallsStar() {
+  const withStars = CALLS.filter(c => callStars(c).length);
+  app.innerHTML = `
+    <button class="back">← 회화 목록</button>
+    <div class="detail">
+      <h2>⭐ 별표 모음</h2>
+      <p class="hint">모든 통화에서 ★를 누른 카드. ★를 다시 누르면 해제된다(다시 열면 빠진다).</p>
+      ${withStars.length ? withStars.map(c => `
+        <section class="star-call" data-call-id="${esc(c.id)}">
+          <h3 class="star-call-h">${esc(c.date)} · ${esc(c.title)}</h3>
+          ${starCardsHtml(c)}
+        </section>`).join('') : '<p class="empty">아직 별표한 카드가 없다.</p>'}
+    </div>`;
+  app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
+  wireChecks(app, () => syncChecks(app));
+  wireStars(app, () => updateCount('calls'));
+  wireKr(app);
+  app.querySelectorAll('.star-call').forEach(sec => {
+    const c = CALLS.find(x => x.id === sec.dataset.callId);
+    if (c) wireCallClips(c, sec);
+  });
 }
 
 // ---- 코너 전환 ----
@@ -2213,6 +2325,7 @@ function route() {
     if (!CALLS && !CALLS_LOCKED) { location.hash = ''; return; }
     setCorner('calls');
     if (!CALLS) { renderCallsLock(); scrollTo(0, 0); return; }
+    if (h === 'calls/star') { renderCallsStar(); scrollTo(0, 0); return; }
     const c = h.startsWith('calls/') ? CALLS.find(x => x.id === h.slice(6)) : null;
     c ? renderCallDetail(c) : renderCallsList();
     scrollTo(0, 0);
