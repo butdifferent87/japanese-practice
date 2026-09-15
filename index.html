@@ -182,6 +182,18 @@
   .star-call-h { font-size: 15px; margin: 18px 0 2px; }
   .vocabcard .fix-top b.jp { font-size: 18px; }
   .vocabcard .mn { margin: 4px 0 0; }
+  /* 안 한 것 / 확인한 것 / 전체 */
+  .filt { display: inline-flex; gap: 0; margin: 10px 0 2px; border: 1px solid var(--stroke); border-radius: 999px; overflow: hidden; }
+  .filt button { border: 0; border-radius: 0; padding: 6px 13px; font-size: 13px; background: var(--card); }
+  .filt button + button { border-left: 1px solid var(--stroke); }
+  .filt button.on { background: var(--accent); color: #fff; }
+  .detail.f-todo .call-panel .fix.done { display: none; }
+  .detail.f-done .call-panel .fix:not(.done) { display: none; }
+  /* 확인한 카드는 한 줄로 접힌다(누르면 펼침) */
+  .fix.done:not(.open) > :not(.fix-top):not(.peek) { display: none; }
+  .fix.done:not(.open) > .peek { margin-top: 4px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body:not(.no-furi) .fix.done:not(.open) > .peek rt { display: none; }
+  .fix.done:not(.open) { cursor: pointer; }
   .fix.done { opacity: .5; }
   .fix.done:hover { opacity: 1; }
   /* 후리가나가 한자보다 길 때 한자 사이가 벌어지지 않게 (예: 状況 → 「状  況」) */
@@ -1843,6 +1855,7 @@ const isStar = id => isDone('callsStar', id);
 const callStars = c => CALL_SECS.flatMap(([sec]) => callArr(c, sec).filter(it => isStar(callItemId(c, sec, it))));
 const callStarTotal = () => (CALLS || []).reduce((n, c) => n + callStars(c).length, 0);
 const byT = (a, b) => ((a.t || '') < (b.t || '') ? -1 : 1);
+const FILT = [['todo', '안 한 것'], ['done', '확인한 것'], ['all', '전체']];
 
 const starBtn = id => `<button class="star${isStar(id) ? ' on' : ''}" data-star-id="${esc(id)}" title="별표 — ⭐ 칸에 모인다">★</button>`;
 const cardTools = (c, sec, it) => { const id = callItemId(c, sec, it); return `<span class="tools">${starBtn(id)}${checkBtn('callsItem', id)}</span>`; };
@@ -1858,7 +1871,7 @@ const CARD = {
             ${cardTools(c, 'fix', f)}</div>
           ${f.ctx ? `<p class="ctx">상대: ${f.ctx.clipKey ? `<button class="clip-btn" data-clip="${esc(f.ctx.clipKey)}" disabled>▶</button>` : ''}<span class="jp"${f.ctx.clipKey ? ` data-clip="${esc(f.ctx.clipKey)}"` : ''}>${ruby(f.ctx.jp)}</span><span class="ctx-kr">${esc(f.ctx.kr || '')}</span></p>` : ''}
           <p class="lbl">내가 한 말</p>
-          <p class="jp said-full">${hl(f.said_full || f.said, f.said, 'bad')}</p>
+          <p class="jp said-full peek">${hl(f.said_full || f.said, f.said, 'bad')}</p>
           ${partsList(f.parts)}
           <p class="lbl">자연스럽게</p>
           <p class="jp nat">${hl(f.natural_full || f.natural, f.natural, 'good')}</p>
@@ -1873,7 +1886,7 @@ const CARD = {
           <p class="lbl">하려던 말</p>
           <p class="wanted">${esc(s.wanted || '')}</p>
           <p class="lbl">실제로 한 말</p>
-          <p class="jp said-full">${ruby(s.said_full || '')}</p>
+          <p class="jp said-full peek">${ruby(s.said_full || '')}</p>
           ${partsList(s.parts)}
           <p class="lbl">이렇게 말하면 됨</p>
           <p class="jp nat">${ruby(s.natural_full || '')}</p>
@@ -1885,7 +1898,7 @@ const CARD = {
           <div class="fix-top"><span class="tsx">${esc(m.t)}</span><span class="tag">${esc(m.cause || '')}</span>
             ${m.clipKey ? `<button class="clip-btn" data-clip="${esc(m.clipKey)}" disabled>▶ 듣기</button>` : ''}
             ${cardTools(c, 'missed', m)}</div>
-          <p class="jp nat"${m.clipKey ? ` data-clip="${esc(m.clipKey)}"` : ''}>${ruby(m.jp_full || '')}</p>
+          <p class="jp nat peek"${m.clipKey ? ` data-clip="${esc(m.clipKey)}"` : ''}>${ruby(m.jp_full || '')}</p>
           <p class="kr">${esc(m.kr || '')}</p>
           ${keysHtml(m.key)}
           ${m.how ? `<p class="why">${esc(m.how)}</p>` : ''}
@@ -1895,21 +1908,21 @@ const CARD = {
           <div class="fix-top"><span class="tsx">${esc(s.t)}</span>
             ${s.clipKey ? `<button class="clip-btn" data-clip="${esc(s.clipKey)}" disabled>▶ 듣기</button>` : ''}
             ${cardTools(c, 'steal', s)}</div>
-          <p class="jp nat"${s.clipKey ? ` data-clip="${esc(s.clipKey)}"` : ''}>${hl(s.jp_full || s.jp, s.jp, 'good')}</p>
+          <p class="jp nat peek"${s.clipKey ? ` data-clip="${esc(s.clipKey)}"` : ''}>${hl(s.jp_full || s.jp, s.jp, 'good')}</p>
           <p class="kr">${esc(s.kr)}</p>
           ${s.note ? `<p class="why">${esc(s.note)}</p>` : ''}
         </div>`,
   good: (c, g) => `
         <div class="fix${cardCls(c, 'good', g)}">
           <div class="fix-top"><span class="tsx">${esc(g.t)}</span>${cardTools(c, 'good', g)}</div>
-          <p class="jp">${hl(g.jp_full || g.jp, g.jp, 'good')}</p>
+          <p class="jp peek">${hl(g.jp_full || g.jp, g.jp, 'good')}</p>
           ${g.kr ? `<p class="kr">${esc(g.kr)}</p>` : ''}
           <p class="why">${esc(g.why)}</p>
         </div>`,
   vocab: (c, v) => `
         <div class="fix vocabcard${cardCls(c, 'vocab', v)}">
           <div class="fix-top"><b class="jp">${ruby(v.jp)}</b>${cardTools(c, 'vocab', v)}</div>
-          <p class="mn">${esc(v.kr)}</p>
+          <p class="mn peek">${esc(v.kr)}</p>
           <p class="why">${v.t ? esc(v.t) + ' · ' : ''}${esc(v.context || '')}</p>
         </div>`,
 };
@@ -1973,6 +1986,7 @@ function renderCallDetail(c) {
     <div class="detail">
       <h2>${esc(c.title)}</h2>
       <div class="meta"><span>${esc(c.date)}</span><span>${esc(c.duration)}</span><span>${esc(c.with || '')}</span></div>
+      <div class="filt">${FILT.map(([k]) => `<button data-filt="${k}"></button>`).join('')}</div>
       <div class="jump">${secs.map(([id, label]) => `<button data-go="${id}">${label}</button>`).join('')}</div>
 
       <h3 class="call-sec" id="sec-star">⭐ 별표</h3>
@@ -2020,7 +2034,7 @@ function renderCallDetail(c) {
     }
   };
   const wireCards = root => {
-    wireChecks(root, () => { syncChecks(app); relabel(); });
+    wireChecks(root, () => { syncChecks(app); relabel(); refreshFilter(); });
     wireStars(root, relabel);
     wireKr(root);
   };
@@ -2036,7 +2050,7 @@ function renderCallDetail(c) {
   const panels = {};
   let cur = 'sec-fix';
   for (const el of [...detail.children]) {
-    if (el === jump || el.matches('h2, .meta, .donebar')) continue;
+    if (el === jump || el.matches('h2, .meta, .donebar, .filt')) continue;   // 필터는 모든 칸에 걸리니 칸 밖에
     if (el.matches('h3.call-sec[id]')) cur = el.id;
     else if (el.matches('h3.call-sec') && cur === 'sec-star') cur = 'sec-fix';   // 🔁 반복 실수는 ✏️ 칸 머리에
     if (!panels[cur]) { panels[cur] = document.createElement('section'); panels[cur].className = 'call-panel'; }
@@ -2059,6 +2073,7 @@ function renderCallDetail(c) {
   const showTab = (id) => {
     if (id === 'sec-star') drawStars();
     for (const [k, p] of Object.entries(panels)) p.hidden = k !== id;
+    refreshFilter();
     jump.querySelectorAll('[data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === id));
     localStorage.setItem('callsTab', id);
     // 칩 줄 아래로 내려가 있었다면 칸의 맨 위가 보이게 즉시 올린다
@@ -2066,6 +2081,41 @@ function renderCallDetail(c) {
     if (scrollY > top) scrollTo(0, top);
   };
   jump.querySelectorAll('[data-go]').forEach(b => b.onclick = () => showTab(b.dataset.go));
+
+  // ---- 안 한 것 / 확인한 것 / 전체 ----
+  // 유저: "체크한 것도 계속 펼쳐져 있어서 뒤에 것 보기가 어렵다". 기본은 「안 한 것」 — 체크하면 그 자리에서 빠진다.
+  // 전체·확인한 것에서도 체크한 카드는 한 줄로 접히고, 누르면 펼쳐진다.
+  const filt = detail.querySelector('.filt');
+  const cardSecs = CALL_SECS.map(([s]) => s);
+  const doneN = () => cardSecs.reduce((n, sec) => n + seen(sec), 0);
+  const allN = cardSecs.reduce((n, sec) => n + callArr(c, sec).length, 0);
+  function refreshFilter() {
+    const mode = localStorage.getItem('callsFilter') || 'todo';
+    FILT.forEach(([k]) => detail.classList.toggle('f-' + k, k === mode));
+    const d = doneN();
+    const n = { todo: allN - d, done: d, all: allN };
+    filt.querySelectorAll('[data-filt]').forEach(b => {
+      b.classList.toggle('on', b.dataset.filt === mode);
+      b.textContent = `${FILT.find(([k]) => k === b.dataset.filt)[1]} ${n[b.dataset.filt]}`;
+    });
+    // 걸러서 빈 칸이면 한마디 남긴다
+    for (const p of Object.values(panels)) {
+      const cards = [...p.querySelectorAll('.fix')];
+      let msg = p.querySelector('.filt-empty');
+      const shown = cards.filter(x => mode === 'all' || (mode === 'done') === x.classList.contains('done')).length;
+      const text = cards.length && !shown ? (mode === 'todo' ? '이 칸은 다 확인했다 👏  「확인한 것」에서 다시 볼 수 있다.' : '이 칸에서 확인한 카드가 아직 없다.') : '';
+      if (text && !msg) { msg = document.createElement('p'); msg.className = 'empty filt-empty'; p.append(msg); }
+      if (msg) { msg.textContent = text; msg.hidden = !text; }
+    }
+  }
+  filt.querySelectorAll('[data-filt]').forEach(b => b.onclick = () => {
+    localStorage.setItem('callsFilter', b.dataset.filt); refreshFilter();
+  });
+  // 접힌(확인한) 카드를 누르면 펼치기/접기. 버튼·음성·번역 누르기는 그대로 둔다.
+  detail.addEventListener('click', e => {
+    if (e.target.closest('button, [data-clip], .kr, a')) return;
+    e.target.closest('.fix.done')?.classList.toggle('open');
+  });
   const saved = localStorage.getItem('callsTab');
   showTab(panels[saved] ? saved : 'sec-fix');
 }
