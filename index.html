@@ -624,7 +624,12 @@ const SYNC_URL = 'https://jp-sync.hikaro-world.workers.dev';
 const SYNC_KEY_NAME = 'sync.key';
 const syncKey = () => localStorage.getItem(SYNC_KEY_NAME) || '';
 
-const fromNhk = entry => (entry?.h || '').startsWith('#nhk') || entry?.kind === 'nhk';
+// 원문을 클라우드로 내보내면 안 되는 출처.
+//   #nhk   — 상용 교재
+//   #calls — 실제 통화. 상대방이 있는 사생활 대화다.
+// 단어장은 '단어만' 올리는 예외를 두지만(아래), 문장·라벨은 어느 쪽도 올리지 않는다.
+const isPrivateSource = entry =>
+  /^#(nhk|calls)/.test(entry?.h || '') || entry?.kind === 'nhk' || entry?.kind === 'calls';
 
 /** 같은 단어를 두 기기가 같은 것으로 알아보게 하는 지문. 원문을 복원할 수는 없다. */
 async function vocabFingerprint(w, sentence) {
@@ -644,12 +649,17 @@ async function vocabFingerprint(w, sentence) {
 async function cloudPayload() {
   const v = {};
   for (const [k, e] of Object.entries(vocabMap)) {
-    if (!fromNhk(e)) { v[k] = e; continue; }
+    if (!isPrivateSource(e)) { v[k] = e; continue; }
     const fp = await vocabFingerprint(e.w, e.s);
     v[fp] = { w: e.w, r: e.r || '', t: e.t };     // 문장·출처 라벨은 올리지 않는다
   }
-  const h = Object.fromEntries(Object.entries(hardMap || {}).filter(([, e]) => !fromNhk(e)));
-  return { d: { yt: doneMap.yt || {} }, v, h };
+  const h = Object.fromEntries(Object.entries(hardMap || {}).filter(([, e]) => !isPrivateSource(e)));
+  // 회화 노트의 ✓·★ 는 id 만 저장한다(`<통화id>:<구분>:<순번>`) — 본문이 없어 올려도 안전하고,
+  // 폰에서도 같은 노트를 보므로 맞춰져야 한다.
+  return {
+    d: { yt: doneMap.yt || {}, callsItem: doneMap.callsItem || {}, callsStar: doneMap.callsStar || {} },
+    v, h,
+  };
 }
 
 /** 받은 단어가 이미 이 기기에 있는 것인지 지문으로 대조한다(중복 생성 방지). */
@@ -690,9 +700,13 @@ async function pullCloud(loud) {
     const incoming = await r.json();
     // 받은 것도 한 번 더 거른다 — 클라우드에 교재 데이터가 있더라도 로컬을 덮지 못하게.
     const safe = {
-      d: { yt: incoming?.d?.yt || {} },
-      v: Object.fromEntries(Object.entries(incoming?.v || {}).filter(([, e]) => !fromNhk(e))),
-      h: Object.fromEntries(Object.entries(incoming?.h || {}).filter(([, e]) => !fromNhk(e))),
+      d: {
+        yt: incoming?.d?.yt || {},
+        callsItem: incoming?.d?.callsItem || {},
+        callsStar: incoming?.d?.callsStar || {},
+      },
+      v: Object.fromEntries(Object.entries(incoming?.v || {}).filter(([, e]) => !isPrivateSource(e))),
+      h: Object.fromEntries(Object.entries(incoming?.h || {}).filter(([, e]) => !isPrivateSource(e))),
     };
     // 지문으로 온 단어가 이미 있는 것이면, 새로 만들지 말고 기존 항목의 시각만 맞춘다.
     const fps = await localFingerprints();
