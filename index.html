@@ -2316,6 +2316,7 @@ const cornerBtns = {
   hard: document.getElementById('cornerHard'),
 };
 cornerBtns.nhk.hidden = NHK.length === 0;
+cornerBtns.yt.hidden = VIDEOS.length === 0;   // 테스터 페이지엔 유튜브 노트가 없다
 cornerBtns.calls.hidden = !(CALLS || CALLS_LOCKED);
 cornerBtns.calls.onclick = () => { location.hash = 'calls'; };
 cornerBtns.yt.onclick = () => { location.hash = ''; };
@@ -2603,6 +2604,8 @@ function route() {
       if (last === 'nhk' && NHK.length) { location.hash = 'nhk'; return; }
       if (last === 'calls' && (CALLS || CALLS_LOCKED)) { location.hash = 'calls'; return; }
       if (last === 'hard' || last === 'vocab') { location.hash = last; return; }
+      // 유튜브 노트가 없는 배포(테스터 페이지)는 회화 노트가 유일한 내용이다.
+      if (!VIDEOS.length && (CALLS || CALLS_LOCKED)) { location.hash = 'calls'; return; }
     }
   }
 
