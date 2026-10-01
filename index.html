@@ -299,7 +299,18 @@
   .ci-try .jp { font-size: 14.5px; font-weight: 600; margin: 0; }
   /* 회화 목록: 왼쪽 통화 / 오른쪽 「지금 고칠 것」 입구. 좁은 화면에선 입구가 위로 와서 한 줄로 줄어든다 */
   .calls-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 16px; align-items: start; }
-  .fx-entry { position: sticky; top: 76px; background: var(--card); border: 1px solid var(--stroke); border-top: 4px solid #C8463C;
+  .list-h { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
+  .list-h small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 6px; }
+  .call-day { font-size: 15px; font-weight: 800; color: var(--accent); }
+  .call-who { font-size: 12px; font-weight: 700; border-radius: 99px; padding: 1px 9px; margin-left: 8px; background: var(--accent-soft); color: var(--accent); }
+  .calls-main .rowtop .chk { margin-left: auto; }
+  .pchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+  .pchips b { font-weight: 600; opacity: .7; margin-left: 2px; }
+  .calls-main .item h2 { margin: 2px 0 3px; }
+  .calls-side { position: sticky; top: 76px; display: grid; gap: 10px; }
+  .starall.side { margin: 0; text-align: left; border-radius: 14px; }
+  .starall.side small { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); }
+  .fx-entry { position: static; background: var(--card); border: 1px solid var(--stroke); border-top: 4px solid #C8463C;
     border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); cursor: pointer; }
   .fx-entry:hover { border-color: #C8463C; }
   .fx-h { margin: 0; font-size: 16px; font-weight: 800; }
@@ -313,11 +324,23 @@
   .fx-go { width: 100%; background: #C8463C; color: #fff; border-color: #C8463C; }
   @media (max-width: 860px) {
     .calls-wrap { grid-template-columns: minmax(0, 1fr); }
-    .fx-entry { order: -1; position: static; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+    .calls-side { order: -1; position: static; }
+    .fx-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
     .fx-entry .fx-list { display: none; }
     .fx-entry .fx-sub { margin: 0; flex: 1; }
     .fx-entry .fx-go { width: auto; margin-left: auto; }
   }
+  .fx-list li .fx-tag { display: block; font-style: normal; font-size: 10.5px; color: var(--muted); }
+  /* 고칠 것 대기열 */
+  .fq-all { font-size: 12.5px; color: var(--muted); margin: -4px 0 12px; }
+  .fq-item { margin: 0 0 14px; }
+  .fq-item > .rule, .fq-item > .fix { margin-top: 4px; }
+  .fq-tag { margin: 0; font-size: 11.5px; font-weight: 700; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .fq-tag.t1 { color: #C8463C; }
+  .fq-open { padding: 1px 8px; font-size: 11px; }
+  .fq-skip { display: block; width: 100%; margin: 6px 0 14px; }
+  .star-src { font-size: 13px; font-weight: 800; margin: 16px 0 8px; }
+  .star-chips { margin-bottom: 14px; }
   /* 학습 화면 */
   .fixstudy .rule.fx { margin-top: 10px; }
   .fx-note { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
@@ -517,7 +540,7 @@
     <button id="cornerYt">유튜브 노트</button>
     <button id="cornerCalls" hidden>회화 노트</button>
     <button id="cornerNhk" hidden>NHK 듣기</button>
-    <button id="cornerHard">어려운 문장</button>
+    <button id="cornerHard">⭐ 모아보기</button>
     <button id="cornerVocab">단어장</button>
   </nav>
 <button id="savePop" hidden>＋ 단어장에 저장</button>
@@ -1946,14 +1969,36 @@ async function ytSrc(id) {
   return '';
 }
 
+// ⭐ 모아보기 — 예전 「어려운 문장」(유튜브·NHK) + 회화 노트 ★를 한곳에. 칩으로 출처를 고른다.
+// 저장소는 그대로 둘이다(hardMap / callsStar). 화면만 합쳤다.
+const STAR_CHIP_KEY = 'starChip';
 function renderHard() {
-  const all = hardList();
+  let chip = 'all';
+  try { chip = localStorage.getItem(STAR_CHIP_KEY) || 'all'; } catch {}
+  const every = hardList();
+  const isNhk = v => v.kind === 'nhk';
+  const all = chip === 'yt' ? every.filter(v => !isNhk(v)) : chip === 'nhk' ? every.filter(isNhk) : chip === 'calls' ? [] : every;
   const q = hardQuery.trim();
   const hits = q ? all.filter(v =>
     (v.jp || '').includes(q) || (v.label || '').includes(q)) : all;
+  const callN = CALLS ? callStarTotal() : 0;
+  const chips = [['all', '전체', every.length + callN], ['calls', '💬 회화 노트', CALLS ? callN : '🔒'],
+    ['yt', '📺 유튜브', every.filter(v => !isNhk(v)).length], ['nhk', '📻 NHK', every.filter(isNhk).length]];
+  const withStars = CALLS ? CALLS.filter(c => callStars(c).length) : [];
+  const callsHtml = chip === 'all' || chip === 'calls' ? `
+    ${chip === 'all' ? '<p class="star-src">💬 회화 노트 ★</p>' : ''}
+    ${!CALLS ? '<p class="empty">회화 노트가 잠겨 있다 — 회화 노트에서 암호를 넣으면 여기도 보인다.</p>'
+      : withStars.length ? withStars.map(c => `
+        <section class="star-call" data-call-id="${esc(c.id)}">
+          <h3 class="star-call-h">${esc(callDay(c.date))}${c.partner ? ` · ${esc(c.partner)}` : ''} · ${esc(c.title.replace(/^전화 수다:\s*/, ''))}</h3>
+          ${starCardsHtml(c)}
+        </section>`).join('') : chip === 'calls' ? '<p class="empty">아직 회화 노트에서 ★한 카드가 없다.</p>' : ''}` : '';
 
   app.innerHTML = `
-    <input class="search" id="hardQ" placeholder="문장·자료 검색" value="${esc(q)}">
+    <div class="pchips star-chips">${chips.map(([k, l, n]) => `<button data-star-chip="${k}" class="${k === chip ? 'on' : ''}">${l} <b>${n}</b></button>`).join('')}</div>
+    ${chip === 'calls' ? '' : `<input class="search" id="hardQ" placeholder="문장·자료 검색" value="${esc(q)}">`}
+    ${callsHtml}
+    ${chip === 'calls' ? '' : `${chip === 'all' && (every.length || withStars.length) ? '<p class="star-src">📺 유튜브 · 📻 NHK 어려운 문장</p>' : ''}
     ${all.length ? `<p class="hint">${hits.length}문장${q ? ` (전체 ${all.length})` : ''}.
       안 잡히는 문장만 모아 다시 듣는 자리다.</p>` : ''}
     ${hits.length ? `<div class="vocab">${hits.map(v => `
@@ -1968,10 +2013,31 @@ function renderHard() {
         </div>
       </div>`).join('')}</div>`
       : `<p class="empty">${all.length ? '검색 결과 없음.'
-        : '아직 없다. 문장 옆 ★ 를 누르면 여기 모인다.'}</p>`}`;
+        : '아직 없다. 문장 옆 ★ 를 누르면 여기 모인다.'}</p>`}`}`;
 
+  app.querySelectorAll('[data-star-chip]').forEach(b => b.onclick = () => {
+    try { localStorage.setItem(STAR_CHIP_KEY, b.dataset.starChip); } catch {}
+    renderHard();
+  });
+  if (CALLS) {
+    wireChecks(app, () => syncChecks(app));
+    wireStars(app, () => updateCount('hard'));
+    wireKr(app);
+    app.querySelectorAll('.star-call').forEach(sec => {
+      const c = CALLS.find(x => x.id === sec.dataset.callId);
+      if (c) wireCallClips(c, sec);
+    });
+    app.querySelectorAll('.star-call').forEach(sec => sec.addEventListener('click', e => {
+      if (e.target.closest('button, [data-clip], .kr, a') || !getSelection().isCollapsed) return;
+      const ev = e.target.closest('.ev');
+      if (ev) { ev.classList.toggle('show'); return; }
+      const head = e.target.closest('.rule-main');
+      if (head) { head.closest('.rule').classList.toggle('open'); return; }
+      e.target.closest('.fix.done')?.classList.toggle('open');
+    }));
+  }
   const input = document.getElementById('hardQ');
-  input.oninput = () => {
+  if (input) input.oninput = () => {
     hardQuery = input.value;
     const at = input.selectionStart;
     renderHard();
@@ -2161,36 +2227,92 @@ function fixBoard() {
   all.sort((a, b) => b.run - a.run || b.ng - a.ng || fresh[b.kind] - fresh[a.kind]);
   all.forEach(x => { x.key = ruleKey(x.rule); x.id = `fix:${latest.id}:${x.key}`; });
   const grad = CALLS.flatMap(c => ((c.carry && c.carry.items) || []).filter(x => x.v === 'grad').map(x => ({ ...x, at: c.date })));
-  return { latest, top: all.slice(0, FIX_N), wait: all.slice(FIX_N), grad };
+  return { latest, all, top: all.slice(0, FIX_N), wait: all.slice(FIX_N), grad };
 }
 const shortDate = d => (d || '').slice(5).replace('-', '/');
 const fxBadge = x => x.kind === 'again' ? `<span class="bd hot">${'🔴'.repeat(Math.min(x.run, 3))} ${x.run}통화 연속</span>`
   : x.kind === 'new' ? '<span class="bd">최근 통화에 새로</span>' : '<span class="bd g">⚪ 쓸 기회 없었음</span>';
 
-// 목록 화면의 입구 — 이름과 순위만. 설명은 학습 화면에서.
-function fixEntryHtml() {
+// ---- 고칠 것 대기열: 10개씩 묶음 ----
+// 순위(fixBoard)는 통화 판정 때만 바뀌지만, 보여주는 묶음은 공부하면서 넘어간다(유저, 2026-10-01).
+//   1단 버릇(fixBoard 순위 전체) → 2단 각 통화 필수 중 1단에 안 묶인 것(최근 통화부터)
+//   → 3단 각 통화 세부 카드(고칠 표현·막힌 순간·못 알아들은 순간, 필수 증거 제외, 최근 통화부터).
+//   단어·가져다 쓸 표현·잘한 점은 「고칠 것」이 아니라 넣지 않는다.
+// 묶음 = 안 한 것 10개. 10개를 다 ✓하면 다음 10개, 「다음 10개 보기」로 건너뛸 수도 있다(남은 건 다음 바퀴에).
+// 새 통화가 들어오면(기준 통화가 바뀌면) 처음부터 다시. 2·3단 ✓는 노트의 체크와 같은 것이라 노트에도 남는다.
+// 묶음 구성은 이 기기에만 기억한다(체크 자체는 동기화된다).
+const BATCH_KEY = 'fixBatch.v1';
+const SEC_NAME = { fix: '고칠 표현', stuck: '막힌 순간', missed: '못 알아들은 순간' };
+function fixQueue() {
   const b = fixBoard();
-  if (!b) return '';
-  const done = b.top.filter(x => isDone('callsItem', x.id)).length;
+  if (!b) return null;
+  const q = [], covered = new Set(), mustCards = new Set();
+  for (const x of b.all) { q.push({ id: x.id, tier: 1, x }); x.links.forEach(l => covered.add(l)); }
+  for (const c of CALLS) (c.must || []).forEach((m, i) => {
+    m.refs.forEach(r => mustCards.add(`${c.id}:${r}`));
+    if (!covered.has(`${c.id}:${i}`)) q.push({ id: mustRuleId(c, i), tier: 2, c, m, i });
+  });
+  for (const c of CALLS) {
+    const cards = [];
+    ['fix', 'stuck', 'missed'].forEach((sec, o) => callArr(c, sec).forEach((it, k) => {
+      const id = `${c.id}:${sec}:${k}`;
+      if (!mustCards.has(id)) cards.push({ id, tier: 3, c, sec, it, o, w: (it.repeat_ts || []).length });
+    }));
+    cards.sort((a, z) => a.o - z.o || z.w - a.w || byT(a.it, z.it));
+    q.push(...cards);
+  }
+  return { ...b, q };
+}
+function fixBatch(fq, skip = false) {
+  let st = null;
+  try { st = JSON.parse(localStorage.getItem(BATCH_KEY)); } catch {}
+  if (!st || st.base !== fq.latest.id) st = { base: fq.latest.id, ids: [], cursor: 0 };
+  const at = new Map(fq.q.map((it, k) => [it.id, k]));
+  let ids = (st.ids || []).filter(id => at.has(id));
+  if (skip || !ids.length || ids.every(id => isDone('callsItem', id))) {
+    const n = fq.q.length, pick = [];
+    for (let step = 0; step < n && pick.length < FIX_N; step++) {
+      const k = (st.cursor + step) % n, it = fq.q[k];
+      if (!isDone('callsItem', it.id) && !(skip && ids.includes(it.id))) pick.push(k);
+    }
+    if (pick.length) { ids = pick.map(k => fq.q[k].id); st.cursor = (pick[pick.length - 1] + 1) % n; }
+    else ids = [];
+  }
+  st.ids = ids;
+  try { localStorage.setItem(BATCH_KEY, JSON.stringify(st)); } catch {}
+  return ids.map(id => fq.q[at.get(id)]);
+}
+const qLabel = it => it.tier === 1 ? it.x.rule : it.tier === 2 ? it.m.rule
+  : it.sec === 'fix' ? it.it.said : it.sec === 'stuck' ? it.it.wanted : it.it.jp_full;
+const qTag = it => it.tier === 1 ? '버릇' : it.tier === 2 ? `${shortDate(it.c.date)} 필수` : `${shortDate(it.c.date)} ${SEC_NAME[it.sec]}`;
+const qDoneN = fq => fq.q.filter(it => isDone('callsItem', it.id)).length;
+
+// 목록 화면의 입구 — 지금 묶음의 이름만. 설명은 학습 화면에서.
+function fixEntryHtml() {
+  const fq = fixQueue();
+  if (!fq) return '';
+  const batch = fixBatch(fq);
+  const done = batch.filter(it => isDone('callsItem', it.id)).length;
   return `
     <aside class="fx-entry" data-go-fix>
-      <p class="fx-h">🔴 지금 고칠 것 <b>${b.top.length}</b></p>
-      <p class="fx-sub">${shortDate(b.latest.date)} 통화까지 · 연습함 ${done}/${b.top.length}</p>
-      <ol class="fx-list">${b.top.map(x => `<li${isDone('callsItem', x.id) ? ' class="ok"' : ''}><span class="jp">${ruby(x.rule)}</span>${x.kind === 'again' ? `<em>${'🔴'.repeat(Math.min(x.run, 3))}</em>` : ''}</li>`).join('')}</ol>
+      <p class="fx-h">🔴 지금 고칠 것 <b>${batch.length}</b></p>
+      <p class="fx-sub">이번 묶음 ${done}/${batch.length} · 전체 ${fq.q.length}개 중 ${qDoneN(fq)}개 확인</p>
+      <ol class="fx-list">${batch.map(it => `<li${isDone('callsItem', it.id) ? ' class="ok"' : ''}><span class="jp">${ruby(qLabel(it) || '')}</span><em class="fx-tag">${esc(qTag(it))}</em></li>`).join('')}</ol>
       <button class="fx-go">학습하러 가기 →</button>
     </aside>`;
 }
 
 // 학습 화면 #calls/fix
-function renderFixStudy() {
-  const b = fixBoard();
-  if (!b) { location.hash = 'calls'; return; }
+function renderFixStudy(skip = false) {
+  const fq = fixQueue();
+  if (!fq) { location.hash = 'calls'; return; }
+  const batch = fixBatch(fq, skip);
   const exLines = x => [
     ...x.ngEx.map(e => `<p class="ci-ex ng"><b>✗</b><span class="jp">${esc(e.jp)}${e.fixed ? ` → <strong>${esc(e.fixed)}</strong>` : ''}</span><em>${esc(e.t || '')}</em></p>`),
     ...x.okEx.map(e => `<p class="ci-ex ok"><b>✓</b><span class="jp">${esc(e.jp)}</span><em>${esc(e.t || '')}</em></p>`)].join('');
   const callBtns = x => [...new Set(x.links.map(l => l.split(':')[0]))].sort().map(cid =>
     `<button class="fb-go" data-go-call="${esc(cid)}">${shortDate(cid)} 노트</button>`).join('');
-  const card = (x, k) => `
+  const habit = (x, k) => `
     <div class="rule fx${isDone('callsItem', x.id) ? ' done' : ''}" data-fx-id="${esc(x.id)}" data-links="${esc(x.links.join(','))}">
       <div class="rule-top"><span class="rno">${k + 1}</span>
         <div class="rule-main"><p class="rule-t jp">${ruby(x.rule)}</p>
@@ -2205,35 +2327,50 @@ function renderFixStudy() {
         <div class="fx-calls"><span>이 규칙이 나온 통화</span>${callBtns(x)}</div>
       </div>
     </div>`;
+  const item = (it, k) => `
+    <div class="fq-item" data-call-id="${esc(it.c ? it.c.id : '')}">
+      <p class="fq-tag t${it.tier}">${esc(qTag(it))}${it.c ? ` <button class="fq-open" data-go-call="${esc(it.c.id)}">노트 →</button>` : ''}</p>
+      ${it.tier === 1 ? habit(it.x, k) : it.tier === 2 ? mustRule(it.c, it.m, it.i, { pos: k }) : CARD[it.sec](it.c, it.it)}
+    </div>`;
   const fold = (title, list, body) => list.length ? `
     <div class="fb-fold"><p class="fb-fold-h">${title} <b>${list.length}</b><span class="arr">▸</span></p><div class="fb-fold-b">${body}</div></div>` : '';
-  const done = () => b.top.filter(x => isDone('callsItem', x.id)).length;
+  const bDone = () => batch.filter(it => isDone('callsItem', it.id)).length;
   app.innerHTML = `
     <button class="back">← 회화 목록</button>
     <div class="detail fixstudy">
       <h2>🔴 지금 고칠 것</h2>
-      <div class="meta"><span>${shortDate(b.latest.date)} 통화까지 · 통화 ${CALLS.length}개 기준</span></div>
-      <p class="hint">여러 통화에서 반복된 실수 상위 ${FIX_N}개. <b>다음 통화 노트가 들어올 때만</b> 다시 매긴다 — 통화에서 맞게 쓰면 졸업해서 빠지고 대기 1위가 올라온다.
-        ✓는 「다음 통화 전에 연습했다」 표시(목록이 바뀌면 초기화)이고, 누르면 각 통화 노트의 같은 필수도 확인 처리된다.</p>
-      <div class="must-prog"><span><i style="width:${done() / b.top.length * 100}%"></i></span><em class="fx-cnt">연습함 ${done()} / ${b.top.length}</em></div>
-      ${b.top.map(card).join('')}
-      ${fold('대기', b.wait, b.wait.map((x, k) => `
-        <p class="fb-sub"><span class="jp">${FIX_N + k + 1}. ${ruby(x.rule)}</span><span class="fb-try">${x.kind === 'none' ? `⚪ 쓸 기회 없었음${x.try ? ` · 써보기: <span class="jp">${ruby(x.try)}</span>` : ''}` : x.kind === 'new' ? '최근 통화에 새로 나옴' : `${x.run}통화 연속`}</span></p>`).join(''))}
-      ${fold('🎓 졸업', b.grad, b.grad.map(x => `
+      <div class="meta"><span>${shortDate(fq.latest.date)} 통화까지 · 통화 ${CALLS.length}개 기준</span></div>
+      <p class="hint">반복된 버릇 → 각 통화 필수 → 통화 세부 순서로 줄을 세워 <b>${FIX_N}개씩</b> 보여준다. 이번 묶음을 다 ✓하면 다음 ${FIX_N}개가 나온다.
+        새 통화 노트가 들어오면 다시 버릇부터. 필수·세부 카드의 ✓는 그 통화 노트에도 똑같이 남는다.</p>
+      <div class="must-prog"><span><i style="width:${batch.length ? bDone() / batch.length * 100 : 0}%"></i></span><em class="fx-cnt">이번 묶음 ${bDone()} / ${batch.length}</em></div>
+      <p class="fq-all">전체 고칠 것 ${fq.q.length}개 중 <b class="fq-alln">${qDoneN(fq)}</b>개 확인</p>
+      ${batch.length ? batch.map(item).join('') : '<p class="empty">고칠 것을 전부 확인했다 🎉 새 통화 노트가 들어오면 다시 채워진다.</p>'}
+      ${batch.length ? `<button class="fq-skip">다음 ${FIX_N}개 보기 (이번 묶음은 다음 바퀴에)</button>` : ''}
+      ${fold('🎓 졸업', fq.grad, fq.grad.map(x => `
         <p class="fb-sub"><span class="jp">${ruby(x.rule)}</span><span class="fb-try">${shortDate(x.at)} 통화에서 맞게 씀${x.ok_ex && x.ok_ex[0] ? ` · <span class="jp">${esc(x.ok_ex[0].jp)}</span>` : ''}</span></p>`).join(''))}
     </div>`;
   app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
-  wireChecks(app, () => {
-    app.querySelector('.fx-cnt').textContent = `연습함 ${done()} / ${b.top.length}`;
-    app.querySelector('.must-prog i').style.width = (done() / b.top.length * 100) + '%';
-  });
+  const progress = () => {
+    app.querySelector('.fx-cnt').textContent = `이번 묶음 ${bDone()} / ${batch.length}`;
+    app.querySelector('.must-prog i').style.width = (batch.length ? bDone() / batch.length * 100 : 0) + '%';
+    app.querySelector('.fq-alln').textContent = qDoneN(fq);
+    app.querySelectorAll('.rule').forEach(r => r.dataset.ruleId && r.classList.toggle('done', isDone('callsItem', r.dataset.ruleId)));
+    syncChecks(app);
+    if (batch.length && bDone() === batch.length) {
+      toast(`🎉 묶음 끝! 다음 ${FIX_N}개`);
+      setTimeout(() => { if (location.hash === '#calls/fix') { renderFixStudy(); scrollTo(0, 0); } }, 900);
+    }
+  };
+  wireChecks(app, progress);
+  wireStars(app, () => {});
+  wireKr(app);
+  // 1단 ✓: 각 통화 노트의 같은 필수 + 증거 카드도 확인(켤 때만)
   app.querySelectorAll('.rule.fx').forEach(r => {
     const btn = r.querySelector('.rule-tools > .chk'), base = btn.onclick;
     btn.onclick = e => {
       base(e);
       r.classList.toggle('done', isDone('callsItem', r.dataset.fxId));
       if (!isDone('callsItem', r.dataset.fxId)) return;
-      // 켤 때만: 각 통화 노트의 같은 필수 규칙 + 그 증거 카드도 확인
       for (const l of r.dataset.links.split(',').filter(Boolean)) {
         const [cid, i] = l.split(':'), c = CALLS.find(x => x.id === cid), m = c && c.must && c.must[+i];
         if (!m) continue;
@@ -2242,36 +2379,71 @@ function renderFixStudy() {
       }
     };
   });
+  // 2단 ✓: 노트에서와 같이 그 필수의 증거 카드도 함께
+  app.querySelectorAll('.rule[data-rule-id]').forEach(r => {
+    const btn = r.querySelector('.rule-tools > .chk'), base = btn.onclick;
+    btn.onclick = e => {
+      base(e);
+      const on = isDone('callsItem', r.dataset.ruleId), cid = r.dataset.ruleId.split(':must:')[0];
+      r.dataset.refs.split(',').forEach(ref => setDone('callsItem', `${cid}:${ref}`, on));
+    };
+  });
+  app.querySelectorAll('.fq-item').forEach(el => {
+    const c = CALLS.find(x => x.id === el.dataset.callId);
+    if (c) wireCallClips(c, el);
+  });
+  app.querySelector('.fq-skip')?.addEventListener('click', () => { renderFixStudy(true); scrollTo(0, 0); });
   app.querySelector('.fixstudy').addEventListener('click', e => {
     const go = e.target.closest('[data-go-call]');
     if (go) { location.hash = 'calls/' + go.dataset.goCall; return; }
-    if (e.target.closest('button')) return;
+    if (e.target.closest('button, [data-clip], .kr, a')) return;
     if (!getSelection().isCollapsed) return;
     const f = e.target.closest('.fb-fold-h');
     if (f) { f.parentElement.classList.toggle('show'); return; }
+    const ev = e.target.closest('.ev');
+    if (ev) { ev.classList.toggle('show'); return; }
     const head = e.target.closest('.rule-main');
-    if (head) head.closest('.rule').classList.toggle('open');
+    if (head) { head.closest('.rule').classList.toggle('open'); return; }
+    e.target.closest('.fix.done')?.classList.toggle('open');
   });
-  app.querySelector('.rule.fx:not(.done)')?.classList.add('open');
+  app.querySelector('.fq-item .rule:not(.done)')?.classList.add('open');
 }
 
+// 「9월 19일 (토)」 — 목록에서 날짜가 먼저 눈에 들어오게(유저: 대화 목록처럼 안 보이고 날짜가 안 보인다)
+function callDay(d) { const t = new Date(d + 'T00:00:00'); return isNaN(t) ? d : `${t.getMonth() + 1}월 ${t.getDate()}일 (${'일월화수목금토'[t.getDay()]})`; }
+// 대화 상대별 칩. 이름은 노트 JSON 의 partner(나만 보는 목록이라 실명 OK — 공개본은 잠금본 안에만 있다).
+// 「지금 고칠 것」은 상대와 상관없이 전체 통화 기준이다(버릇은 상대가 바뀌어도 나온다).
+const PARTNER_KEY = 'callsPartner';
 function renderCallsList() {
   const starN = callStarTotal();
-  app.innerHTML = `<div class="calls-wrap"><div class="calls-main">` + (starN ? `<button class="starall" data-go-star>⭐ 별표 모음 ${starN}</button>` : '') +
-    (CALLS.length ? '<div class="grid">' + CALLS.map(c => `
+  const names = [...new Set(CALLS.map(c => c.partner).filter(Boolean))];
+  let who = localStorage.getItem(PARTNER_KEY) || '';
+  if (who && !names.includes(who)) who = '';
+  const shown = who ? CALLS.filter(c => c.partner === who) : CALLS;
+  app.innerHTML = `<div class="calls-wrap"><div class="calls-main">
+    <p class="list-h">💬 대화 목록 <small>${shown.length}개 · 최근 통화가 위</small></p>
+    ${names.length > 1 ? `<div class="pchips">${[['', '전체', CALLS.length], ...names.map(n => [n, n, CALLS.filter(c => c.partner === n).length])]
+      .map(([k, l, n]) => `<button data-partner="${esc(k)}" class="${k === who ? 'on' : ''}">${esc(l)} <b>${n}</b></button>`).join('')}</div>` : ''}` +
+    (shown.length ? '<div class="grid">' + shown.map(c => `
     <div class="item plain${isDone('calls', c.id) ? ' done' : ''}" data-id="${esc(c.id)}">
       <div>
-        <div class="rowtop"><h2>${esc(c.title)}</h2>${checkBtn('calls', c.id)}</div>
-        <div class="meta"><span>${esc(c.date)}</span><span>${esc(c.duration)}</span><span>${esc(c.with || '')}</span></div>
+        <div class="rowtop"><span class="call-day">${esc(callDay(c.date))}</span>${c.partner ? `<span class="call-who">${esc(c.partner)}</span>` : ''}${checkBtn('calls', c.id)}</div>
+        <h2>${esc(c.title.replace(/^전화 수다:\s*/, ''))}</h2>
+        <div class="meta"><span>${esc(c.duration)}</span><span>${esc(c.partner ? (c.with || '').replace(/^일본인 친구\s*·\s*/, '') : (c.with || ''))}</span></div>
         <p>고칠 표현 ${c.fixes.length}${c.stuck ? ` · 막힌 순간 ${c.stuck.length}` : ''}${c.missed ? ` · 못 알아들은 순간 ${c.missed.length}` : ''} · 가져다 쓸 표현 ${c.steal.length} · 새 단어 ${c.vocab.length}${callStars(c).length ? ` · ⭐ ${callStars(c).length}` : ''}</p>
       </div>
     </div>`).join('') + '</div>'
-    : '<p class="empty">아직 회화 노트 없음.</p>') + `</div>${fixEntryHtml()}</div>`;
+    : '<p class="empty">아직 회화 노트 없음.</p>') + `</div>
+    <div class="calls-side">${fixEntryHtml()}${starN ? `<button class="starall side" data-go-star>⭐ 회화 노트 별표 <b>${starN}</b><small>⭐ 모아보기에서 보기</small></button>` : ''}</div></div>`;
   app.querySelectorAll('.item').forEach(el => el.onclick = () => { location.hash = 'calls/' + el.dataset.id; });
   const fx = app.querySelector('[data-go-fix]');
   if (fx) fx.onclick = () => { location.hash = 'calls/fix'; };
+  app.querySelectorAll('[data-partner]').forEach(b => b.onclick = () => {
+    try { localStorage.setItem(PARTNER_KEY, b.dataset.partner); } catch {}
+    renderCallsList();
+  });
   const sa = app.querySelector('[data-go-star]');
-  if (sa) sa.onclick = () => { location.hash = 'calls/star'; };
+  if (sa) sa.onclick = () => { try { localStorage.setItem(STAR_CHIP_KEY, 'calls'); } catch {} location.hash = 'hard'; };
   wireChecks(app, () => updateCount('calls'));
 }
 
@@ -2789,7 +2961,7 @@ function setCorner(name) {
 function updateCount(name) {
   const el = document.getElementById('count');
   if (name === 'hard') {
-    el.textContent = `${hardList().length}문장`;
+    el.textContent = `${hardList().length + (CALLS ? callStarTotal() : 0)}개`;
   } else if (name === 'vocab') {
     el.textContent = `${vocabList().length}개`;
   } else if (name === 'calls') {
@@ -3093,7 +3265,7 @@ function route() {
     if (!CALLS && !CALLS_LOCKED) { location.hash = ''; return; }
     setCorner('calls');
     if (!CALLS) { renderCallsLock(); scrollTo(0, 0); return; }
-    if (h === 'calls/star') { renderCallsStar(); scrollTo(0, 0); return; }
+    if (h === 'calls/star') { try { localStorage.setItem(STAR_CHIP_KEY, 'calls'); } catch {} location.hash = 'hard'; return; }
     if (h === 'calls/fix') { renderFixStudy(); scrollTo(0, 0); return; }
     const c = h.startsWith('calls/') ? CALLS.find(x => x.id === h.slice(6)) : null;
     c ? renderCallDetail(c) : renderCallsList();
