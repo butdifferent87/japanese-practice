@@ -256,6 +256,12 @@
   .do { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-soft); border-radius: 4px; color: var(--accent); }
   .ev-s { font-size: 15px; margin: 2px 0 0; }
   .hit { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-soft); border-radius: 4px; color: var(--accent); font-weight: 700; }
+  /* 빠진 자리: 글자 사이 세로선 + 위에 ‸ */
+  .dins { display: inline-block; position: relative; width: 3px; height: 1.1em; vertical-align: -0.12em; margin: 0 1px;
+    background: rgba(200,70,60,.9); border-radius: 2px; }
+  .dins::before { content: "‸"; position: absolute; left: 50%; transform: translateX(-50%); top: -0.95em; font-size: 15px; font-weight: 800; color: #C8463C; line-height: 1; }
+  .dins-z { background: rgba(230,150,0,.9); }
+  .dins-z::before { color: #B26A00; }
   .dz { text-decoration: underline dotted rgba(230,150,0,.9); text-underline-offset: 5px; text-decoration-thickness: 2px; }
   .ev-why { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); }
   .ev-why li { margin: 0 0 3px; }
@@ -2594,6 +2600,7 @@ const badgeText = b => b.replace(/^(\d+)회$/, '이번 통화 $1번');
 // 후리가나 덩어리 {漢字|よみ} 는 한 덩어리로 비교한다. 문장 부호·공백만 다른 덩어리는 표시하지 않는다(눈만 어지럽다).
 const rubyToks = s => [...(s || '').matchAll(/\{([^|{}]+)\|([^|{}]+)\}|[\s\S]/g)].map(m => m[1]
   ? { k: m[1], h: `<ruby>${esc(m[1])}<rt>${esc(m[2])}</rt></ruby>` } : { k: m[0], h: esc(m[0]) });
+const PUNCT = /^[\s、。，．,.!?！？…・「」『』〜ー（）()]+$/;
 function lcsKeep(a, b) {
   const n = a.length, m = b.length;
   const ka = new Array(n).fill(false), kb = new Array(m).fill(false);
@@ -2601,24 +2608,34 @@ function lcsKeep(a, b) {
   const L = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
   for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
     L[i][j] = a[i].k === b[j].k ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const pairs = [];
   for (let i = 0, j = 0; i < n && j < m;) {
-    if (a[i].k === b[j].k) { ka[i++] = kb[j++] = true; }
+    if (a[i].k === b[j].k) { pairs.push([i, j]); ka[i++] = kb[j++] = true; }
     else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++;
   }
+  // 빠진 자리(gap): 틀린 쪽엔 아무것도 없는데 고친 쪽엔 글자가 들어간 틈. 값 = 틀린 쪽 토큰 번호(그 앞에 표시)
+  // 예: いいじゃないか → いいんじゃないか 는 지울 글자가 없어 밑줄이 안 생겼다(2026-10-01 유저 지적).
+  const gaps = new Set();
+  let pi = -1, pj = -1;
+  for (const [i, j] of [...pairs, [n, m]]) {
+    if (i - pi === 1 && j - pj > 1 && !PUNCT.test(b.slice(pj + 1, j).map(x => x.k).join(''))) gaps.add(i);
+    pi = i; pj = j;
+  }
+  ka.gaps = gaps;
   return [ka, kb];
 }
-const PUNCT = /^[\s、。，．,.!?！？…・「」『』〜ー（）()]+$/;
 // 같은 표시끼리 이어 붙여 감싼다. cls(i) = '' | 'dx'(틀린 곳) | 'do'(고친 곳) | 'hit'(맞게 쓴 곳)
-function wrapRuns(t, cls) {
+function wrapRuns(t, cls, gaps = null, gapCls = 'dins') {
   let h = '', run = [], rc = '';
   const flush = () => { if (!run.length) return; const txt = run.map(i => t[i].k).join(''), inner = run.map(i => t[i].h).join('');
     h += rc && (rc === 'hit' || !PUNCT.test(txt)) ? `<span class="${rc}">${inner}</span>` : inner; run = []; };
-  t.forEach((x, i) => { const c = cls(i); if (c !== rc) { flush(); rc = c; } run.push(i); });
-  flush(); return h;
+  const mark = `<span class="${gapCls}" title="여기에 빠진 말이 있다"></span>`;
+  t.forEach((x, i) => { if (gaps && gaps.has(i)) { flush(); h += mark; } const c = cls(i); if (c !== rc) { flush(); rc = c; } run.push(i); });
+  flush(); if (gaps && gaps.has(t.length)) h += mark; return h;
 }
 function diffPair(wrong, right) {
   const a = rubyToks(wrong), b = rubyToks(right), [ka, kb] = lcsKeep(a, b);
-  return [wrapRuns(a, i => ka[i] ? '' : 'dx'), wrapRuns(b, i => kb[i] ? '' : 'do')];
+  return [wrapRuns(a, i => ka[i] ? '' : 'dx', ka.gaps), wrapRuns(b, i => kb[i] ? '' : 'do')];
 }
 // 맞게 쓴 말: 맞은 부분(hit)은 초록, 그 밖에 고친 형태(fixed)와 다른 곳은 물결 밑줄. fixed 쪽은 바뀐 곳만 초록.
 function okPair(jp, hit, fixed) {
@@ -2627,7 +2644,7 @@ function okPair(jp, hit, fixed) {
   a.forEach((x, i) => { const s0 = pos; pos += x.k.length; inHit[i] = at >= 0 && pos > at && s0 < at + hit.length; });
   if (!fixed) return [wrapRuns(a, i => inHit[i] ? 'hit' : ''), ''];
   const b = rubyToks(fixed), [ka, kb] = lcsKeep(a, b);
-  return [wrapRuns(a, i => inHit[i] ? 'hit' : ka[i] ? '' : 'dz'), wrapRuns(b, i => kb[i] ? '' : 'do')];
+  return [wrapRuns(a, i => inHit[i] ? 'hit' : ka[i] ? '' : 'dz', ka.gaps, 'dins dins-z'), wrapRuns(b, i => kb[i] ? '' : 'do')];
 }
 // 틀림 ❌ / 어색함 🔸 — 유저: 문법은 맞는데 말투만 어색한 것까지 ✗로 똑같이 보이면 헷갈린다.
 // 판정 예문(ng_ex)은 lv 필드, 고칠 표현 카드는 조각 판정(parts)에 ❌가 하나라도 있으면 틀림, 없으면 어색함.
