@@ -269,6 +269,34 @@
   body:not(.no-furi) .ev-more .mx, body:not(.no-furi) .ev-more .mo { line-height: 2; }
   .ev-more .keys { margin-top: 2px; }
   .rule-more { font-size: 12.5px; color: var(--muted); margin: 0 2px 8px; }
+  .bd.hot { background: #C8463C; color: #fff; }
+  /* 지난 통화 필수 판정 */
+  .carry { border: 1px solid var(--stroke); border-radius: 12px; background: var(--card); padding: 11px 12px 6px; margin: 14px 0 4px; }
+  .carry-h { margin: 0 0 7px; font-size: 14.5px; font-weight: 700; }
+  .carry-h small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .carry-sum { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+  .carry-sum span { font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 3px 10px; background: var(--stroke); }
+  .carry-sum .cs-grad { background: var(--accent-soft); color: var(--accent); }
+  .carry-sum .cs-again { background: rgba(200,70,60,.10); color: #C8463C; }
+  .ci { border-top: 1px dashed var(--stroke); padding: 7px 0; cursor: pointer; }
+  .ci-line { display: flex; align-items: baseline; gap: 7px; }
+  .ci-ic { flex: none; font-size: 12px; min-width: 22px; }
+  .ci-rule { flex: 1; font-size: 14.5px; font-weight: 600; margin: 0; }
+  .ci-grad .ci-rule { color: var(--muted); }
+  .ci-cnt { flex: none; font-size: 11.5px; color: var(--muted); }
+  .ci-more { display: none; margin: 6px 0 2px 29px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--text) 5%, var(--card)); font-size: 13.5px; }
+  .ci.show .ci-more { display: block; }
+  .ci-more p { margin: 0; }
+  .ci-more p + p { margin-top: 5px; }
+  .ci-note { color: var(--muted); }
+  .ci-ex { display: grid; grid-template-columns: 16px 1fr auto; gap: 4px; align-items: baseline; }
+  .ci-ex .jp { font-size: 14px; margin: 0; }
+  .ci-ex em { font-style: normal; font-size: 11px; color: var(--muted); }
+  .ci-ex.ok b { color: var(--accent); }
+  .ci-ex.ng b { color: #C8463C; }
+  .ci-ex.ng .jp { color: var(--muted); }
+  .ci-try b { display: block; font-size: 11.5px; color: var(--accent); }
+  .ci-try .jp { font-size: 14.5px; font-weight: 600; margin: 0; }
   .upline { display: block; width: 100%; text-align: left; font-size: 13px; font-weight: 700; color: #C8463C;
     background: rgba(200,70,60,.08); border: 0; border-radius: 10px; padding: 9px 12px; margin: 0 0 12px; }
   /* 후리가나가 한자보다 길 때 한자 사이가 벌어지지 않게 (예: 状況 → 「状  況」) */
@@ -2206,8 +2234,50 @@ const evMore = (sec, it) => {
   }
   return rows.map(([h, b]) => `<div class="mrow"><span class="mh">${h}</span>${b}</div>`).join('');
 };
+// ---- 지난 통화 필수, 이번엔? (이월 판정) ----
+// c.carry = { from, items: [{ rule, v: grad|again|none, ok, ng, streak, must_idx, ok_ex, ng_ex, note, try }] }
+// 「안 나왔다」만으로는 졸업이 아니다(유저: 쓸 일이 없어서 안 나왔을 수도 있다). 맞게 쓴 증거가 있어야 🎓,
+// 맞게도 틀리게도 안 썼으면 ⚪ 보류 — 감점도 졸업도 없이 다음 통화로 넘어가고 「써볼 문장」을 준다.
+const CARRY_V = {
+  grad: ['🎓', '졸업', '맞게 썼다'],
+  again: ['🔴', '또 틀림', '또 나왔다'],
+  none: ['⚪', '기회 없음', '쓸 일이 없었다'],
+};
+const carryExHtml = (mark, cls, list) => (list || []).map(x =>
+  `<p class="ci-ex ${cls}"><b>${mark}</b><span class="jp">${esc(x.jp)}</span><em>${esc(x.t || '')}</em></p>`).join('');
+const carryHtml = c => {
+  const k = c.carry, items = (k && k.items) || [];
+  if (!items.length) return '';
+  const n = v => items.filter(x => x.v === v).length;
+  const fromTxt = k.from ? k.from.slice(5).replace('-', '/') : '지난 통화';
+  return `
+      <div class="carry">
+        <p class="carry-h">지난 통화 필수, 이번엔? <small>${esc(fromTxt)} 통화까지의 필수 ${items.length}개</small></p>
+        <div class="carry-sum">${['grad', 'again', 'none'].map(v => `<span class="cs-${v}">${CARRY_V[v][0]} ${CARRY_V[v][1]} <b>${n(v)}</b></span>`).join('')}</div>
+        ${items.map(x => `
+        <div class="ci ci-${x.v}">
+          <div class="ci-line"><span class="ci-ic">${x.v === 'again' ? '🔴'.repeat(Math.min((x.streak || 1) + 1, 3)) : CARRY_V[x.v][0]}</span>
+            <span class="ci-rule jp">${ruby(x.rule)}</span>
+            <span class="ci-cnt">${x.v === 'none' ? '보류' : `맞게 ${x.ok || 0} · 틀림 ${x.ng || 0}`}${x.v === 'again' ? ` · ${(x.streak || 1) + 1}통화 연속` : ''}</span></div>
+          <div class="ci-more">
+            ${x.note ? `<p class="ci-note">${esc(x.note)}</p>` : ''}
+            ${carryExHtml('✓', 'ok', x.ok_ex)}${carryExHtml('✗', 'ng', x.ng_ex)}
+            ${x.try ? `<p class="ci-try"><b>다음 통화에서 써보기</b><span class="jp">${ruby(x.try)}</span></p>` : ''}
+            ${x.v === 'again' && x.must_idx != null ? '<p class="ci-note">→ 이번 필수에도 들어 있다(맨 위).</p>' : ''}
+          </div>
+        </div>`).join('')}
+      </div>`;
+};
+// 또 틀린 규칙이 이번 필수에도 있으면 그 규칙을 맨 위로, 연속 배지를 붙인다. 데이터 순번(=✓ id)은 그대로 둔다.
+const mustOrder = c => {
+  const streak = {};
+  for (const x of (c.carry && c.carry.items) || []) if (x.v === 'again' && x.must_idx != null) streak[x.must_idx] = Math.max(streak[x.must_idx] || 0, x.streak || 1);
+  const idx = (c.must || []).map((_, i) => i).sort((a, b) => (streak[b] || 0) - (streak[a] || 0) || a - b);
+  return { idx, streak };
+};
+
 const MUST_ORDER = ['fix', 'stuck', 'missed'];
-const mustRule = (c, m, i, open = false) => {
+const mustRule = (c, m, i, { open = false, pos = i, streak = 0 } = {}) => {
   // 같은 종류끼리 붙이고(고칠 표현 → 막힌 순간 → 못 알아들음), 종류 이름은 무리 위에 한 번만 쓴다.
   // 상자를 한 겹 더 두르면 4겹이 돼 다시 무거워지니 소제목만 둔다. 같은 종류 안에서는 통화 시각 순.
   const items = m.refs.map(ref => refItem(c, ref)).filter(([, it]) => it)
@@ -2215,9 +2285,9 @@ const mustRule = (c, m, i, open = false) => {
   const typeN = sec => items.filter(([s]) => s === sec).length;
   return `
     <div class="rule${isDone('callsItem', mustRuleId(c, i)) ? ' done' : ''}${open ? ' open' : ''}" data-rule-id="${esc(mustRuleId(c, i))}" data-refs="${esc(m.refs.join(','))}">
-      <div class="rule-top"><span class="rno">${i + 1}</span>
+      <div class="rule-top"><span class="rno">${pos + 1}</span>
         <div class="rule-main"><p class="rule-t jp">${ruby(m.rule)}</p>
-          <div class="badges">${(m.badges || []).map(b => `<span class="bd">${esc(badgeText(b))}</span>`).join('')}</div>
+          <div class="badges">${streak ? `<span class="bd hot">${'🔴'.repeat(Math.min(streak + 1, 3))} ${streak + 1}통화 연속</span>` : ''}${(m.badges || []).map(b => `<span class="bd">${esc(badgeText(b))}</span>`).join('')}</div>
           <div class="rule-toggle"><span class="arr">▸</span><span class="t-open">내가 실제로 한 말 ${items.length}개 보기</span><span class="t-close">접기</span></div></div>
         <span class="rule-tools">${starBtn(mustRuleId(c, i))}${checkBtn('callsItem', mustRuleId(c, i))}</span></div>
       <div class="rule-body">
@@ -2260,7 +2330,7 @@ function syncChecks(root) {
 // 별표한 카드를 칸별로 묶어 그린다.
 function starCardsHtml(c) {
   const rules = starredRules(c);
-  const ruleHtml = rules.length ? `<p class="star-grp">🔴 필수 규칙 ${rules.length}</p>${rules.map(([m, i]) => mustRule(c, m, i, true)).join('')}` : '';
+  const ruleHtml = rules.length ? `<p class="star-grp">🔴 필수 규칙 ${rules.length}</p>${rules.map(([m, i]) => mustRule(c, m, i, { open: true })).join('')}` : '';
   const groups = ruleHtml + CALL_SECS.map(([sec, , title]) => {
     const its = callArr(c, sec).filter(it => isStar(callItemId(c, sec, it))).sort(byT);
     return its.length ? `<p class="star-grp">${title} ${its.length}</p>${its.map(it => CARD[sec](c, it)).join('')}` : '';
@@ -2302,6 +2372,7 @@ function renderCallDetail(c) {
   const restN = cardTotal - mustSet.size;
   const mustHtml = must.length ? `
       <h3 class="call-sec" id="sec-must">🔴 이번 필수</h3>
+      ${carryHtml(c)}
       <div class="must-sum">
         <div class="m"><b class="must-n">${must.length}개</b><small>🔴 이번 필수 · 카드 ${mustSet.size}장 · 약 ${Math.max(3, Math.round(mustSet.size * 0.3))}분</small></div>
         <button data-go-rest><b>${restN}장</b><small>⚪ 여유 있으면 (아래 칩)</small></button>
@@ -2310,7 +2381,7 @@ function renderCallDetail(c) {
       <div class="must-fin" hidden><b>🎉 오늘 필수 끝!</b><small>이 규칙들은 다음 통화에서 또 나오는지 본다. 여유 있으면 나머지 ${restN}장도.</small>
         <br><button data-go-rest>나머지 보러 가기</button></div>
       <p class="hint">바쁜 날은 이 칸만 보면 된다. 규칙을 누르면 실제로 한 말이 펼쳐지고, 외웠으면 ✓.</p>
-      ${must.map((m, i) => mustRule(c, m, i)).join('')}` : '';
+      ${(({ idx, streak }) => idx.map((i, pos) => mustRule(c, must[i], i, { pos, streak: streak[i] || 0 })).join(''))(mustOrder(c))}` : '';
   app.innerHTML = `
     <button class="back">← 회화 목록</button>
     <div class="detail">
@@ -2480,6 +2551,8 @@ ${mustHtml}
     if (e.target.closest('[data-go-rest]')) { showTab('sec-fix'); return; }
     if (e.target.closest('button, [data-clip], .kr, a')) return;
     if (!getSelection().isCollapsed) return;   // 드래그로 글자를 고른 건 클릭이 아니다(단어 저장 중)
+    const ci = e.target.closest('.ci');
+    if (ci) { ci.classList.toggle('show'); return; }
     const ev = e.target.closest('.ev');
     if (ev) { ev.classList.toggle('show'); return; }
     const head = e.target.closest('.rule-main');
