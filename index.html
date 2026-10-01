@@ -196,6 +196,81 @@
   .fix.done:not(.open) { cursor: pointer; }
   .fix.done { opacity: .5; }
   .fix.done:hover { opacity: 1; }
+
+  /* ---- 🔴 필수 (상위 20%) ----
+     바쁜 날엔 이 칸만 보고 닫아도 되게: 외울 규칙 한 줄 + 그 규칙의 증거 카드. */
+  .must-sum { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 10px; }
+  .must-sum > * { border-radius: 12px; padding: 10px 12px; border: 1px solid var(--stroke); background: var(--card); text-align: left; }
+  .must-sum b { display: block; font-size: 21px; line-height: 1.2; }
+  .must-sum small { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .must-sum .m { background: rgba(200,70,60,.08); border-color: rgba(200,70,60,.25); }
+  .must-sum .m b { color: #C8463C; }
+  .must-sum .m.all { background: var(--accent-soft); border-color: var(--accent); }
+  .must-sum .m.all b { color: var(--accent); }
+  .must-sum button { font-weight: 400; cursor: pointer; }
+  .must-prog { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 12.5px; color: var(--muted); }
+  .must-prog span { flex: 1; height: 6px; background: var(--stroke); border-radius: 99px; overflow: hidden; }
+  .must-prog i { display: block; height: 100%; background: #C8463C; transition: width .25s; }
+  .must-fin { text-align: center; background: var(--accent-soft); border-radius: 12px; padding: 12px; margin: 0 0 12px; }
+  .must-fin b { display: block; color: var(--accent); font-size: 15px; }
+  .must-fin small { color: var(--muted); font-size: 12.5px; }
+  .must-fin button { margin-top: 8px; }
+  .rule { background: var(--card); border: 1px solid var(--stroke); border-left: 4px solid #C8463C; border-radius: 11px;
+    padding: 10px 12px; margin: 0 0 10px; }
+  .rule.done { border-left-color: var(--accent); }
+  .rule.done:not(.open) { opacity: .55; }
+  .rule-top { display: flex; align-items: flex-start; gap: 8px; }
+  .rule-tools { flex: none; display: flex; gap: 6px; }
+  .rno { font-size: 13px; font-weight: 800; color: #C8463C; min-width: 16px; margin-top: 2px; }
+  .rule.done .rno { color: var(--accent); }
+  .rule-main { flex: 1; cursor: pointer; }
+  .rule-t { margin: 0; font-size: 16px; font-weight: 700; }
+  .badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+  .bd { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 99px; background: rgba(200,70,60,.10); color: #C8463C; }
+  .bd.g { background: var(--stroke); color: var(--muted); }
+  .rule:not(.open) .rule-body { display: none; }
+  .rule-toggle { margin-top: 7px; font-size: 13px; font-weight: 600; color: var(--accent); }
+  .rule-toggle .arr { display: inline-block; margin-right: 5px; transition: transform .15s; }
+  .rule.open .rule-toggle .arr { transform: rotate(90deg); }
+  .rule-toggle .t-close, .rule.open .rule-toggle .t-open { display: none; }
+  .rule.open .rule-toggle .t-close { display: inline; }
+  /* ② 펼친 단계: 왜(옅은 상자) + 내가 한 말 상자들 — 규칙 줄보다 한 단계 들어가고 배경이 다르다 */
+  .rule-body { margin: 10px 0 2px; padding-left: 24px; }
+  .rule-why { font-size: 13.5px; line-height: 1.6; margin: 0 0 12px; padding: 8px 11px; border-radius: 9px;
+    background: rgba(200,70,60,.06); color: var(--text); }
+  .rule-why::before { content: "왜? "; font-weight: 700; color: #C8463C; }
+  /* 층마다 배경을 번갈아 둔다 — 묶음(회색) > 말 상자(흰색) > 자세히(회색) */
+  .ev-group { background: color-mix(in srgb, var(--text) 5%, var(--card)); border: 1px solid var(--stroke); border-radius: 12px; padding: 10px 10px 4px; }
+  .ev-group-h { margin: 0 2px 8px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+  .ev-type { margin: 4px 2px 5px; font-size: 12px; font-weight: 700; color: var(--accent); }
+  .ev + .ev-type { margin-top: 12px; }
+  .ev { background: var(--card); border: 1px solid var(--stroke); border-radius: 10px; padding: 8px 11px; margin: 0 0 8px; cursor: pointer; }
+  .ev-head { display: flex; align-items: center; font-size: 11.5px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+  .ev-arr { margin-left: auto; color: var(--accent); }
+  /* 상자마다 ★만 둔다 — 확인(✓)은 규칙 단위, ★는 「이 문장만 다시 보기」(⭐ 칸에 모인다) */
+  .ev-head .star { margin-left: 10px; }
+  .ev.show .ev-arr { visibility: hidden; }
+  .ev p { margin: 0; }
+  .ev-x, .ev-o { display: grid; grid-template-columns: 18px 1fr; font-size: 15px; }
+  .ev-x b, .ev-o b { font-size: 13px; }
+  .ev-x { color: var(--muted); }
+  .ev-x b { color: #C8463C; }
+  .ev-o { font-weight: 600; }
+  .ev-o b { color: var(--accent); }
+  .ev-want { font-size: 13px; color: var(--muted); }
+  body:not(.no-furi) .ev-x, body:not(.no-furi) .ev-o { line-height: 2; }
+  /* ③ 자세히: 상자 안 흰 칸. 위 줄과 같은 말은 되풀이하지 않는다 */
+  .ev-more { display: none; margin-top: 8px; padding: 9px 11px; background: color-mix(in srgb, var(--text) 5%, var(--card)); border-radius: 8px; font-size: 13.5px; }
+  .ev.show .ev-more { display: block; }
+  .mrow + .mrow { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--stroke); }
+  .mh { display: block; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+  .ev-more .mx { color: var(--muted); }
+  .ev-more .mo { font-weight: 600; margin-top: 2px; }
+  body:not(.no-furi) .ev-more .mx, body:not(.no-furi) .ev-more .mo { line-height: 2; }
+  .ev-more .keys { margin-top: 2px; }
+  .rule-more { font-size: 12.5px; color: var(--muted); margin: 0 2px 8px; }
+  .upline { display: block; width: 100%; text-align: left; font-size: 13px; font-weight: 700; color: #C8463C;
+    background: rgba(200,70,60,.08); border: 0; border-radius: 10px; padding: 9px 12px; margin: 0 0 12px; }
   /* 후리가나가 한자보다 길 때 한자 사이가 벌어지지 않게 (예: 状況 → 「状  況」) */
   ruby { ruby-align: center; }
   .fix.playing { border-color: var(--accent); }
@@ -2015,7 +2090,8 @@ const CALL_SECS = [   // [칸, 데이터 키, 제목]
 const callArr = (c, sec) => c[CALL_SECS.find(([s]) => s === sec)[1]] || [];
 const callItemId = (c, sec, it) => `${c.id}:${sec}:${callArr(c, sec).indexOf(it)}`;
 const isStar = id => isDone('callsStar', id);
-const callStars = c => CALL_SECS.flatMap(([sec]) => callArr(c, sec).filter(it => isStar(callItemId(c, sec, it))));
+const starredRules = c => (c.must || []).map((m, i) => [m, i]).filter(([, i]) => isStar(mustRuleId(c, i)));
+const callStars = c => [...starredRules(c).map(([m]) => m), ...CALL_SECS.flatMap(([sec]) => callArr(c, sec).filter(it => isStar(callItemId(c, sec, it))))];
 const callStarTotal = () => (CALLS || []).reduce((n, c) => n + callStars(c).length, 0);
 const byT = (a, b) => ((a.t || '') < (b.t || '') ? -1 : 1);
 const FILT = [['todo', '안 한 것'], ['done', '확인한 것'], ['all', '전체']];
@@ -2090,6 +2166,74 @@ const CARD = {
         </div>`,
 };
 
+// ---- 🔴 필수 (상위 20%) ----
+// c.must = [{ rule, why, badges, refs: ['fix:8', 'stuck:1'], more }]. 카드 전체가 같은 무게로 늘어서 있으면
+// 바쁜 날 급한 것까지 같이 건너뛴다(유저). 그래서 반드시 고칠 것을 「외울 규칙 한 줄」로 묶어 맨 앞에 둔다.
+// 증거 카드는 원래 칸에서 빠지고(두 번 나오지 않게) 그 칸 맨 위에 「필수에 들어간 n건」으로만 남는다.
+// 카드 수 20% 상한·참조 유효성은 calls_build.mjs 가 빌드 때 막는다.
+// 펼치는 단계를 셋으로 나누고 단계마다 생김새를 다르게 한다(유저: "펼친 게 안 펼친 것과 비슷해 구분이 안 되고,
+// 글씨가 갑자기 잔뜩 늘어나 읽기 싫다").
+//   ① 규칙 한 줄 + 배지 + 「▸ 내가 실제로 한 말 n개 보기」
+//   ② 펼치면: 왜(한 줄 상자) + 내가 한 말마다 회색 상자(✗ 한 말 / ✓ 이렇게) — 짧은 조각만
+//   ③ 상자를 누르면: 그 상자 안 흰 칸에 설명·문장 전체만 더한다. 같은 말을 되풀이하는 카드 전체는 안 그린다.
+const MUST_LABEL = { fix: '고칠 표현', stuck: '막힌 순간', missed: '못 알아들음' };
+const mustRefs = c => new Set((c.must || []).flatMap(m => m.refs));
+const mustRuleId = (c, i) => `${c.id}:must:${i}`;
+const refItem = (c, ref) => { const [sec, i] = ref.split(':'); return [sec, callArr(c, sec)[+i]]; };
+const isMustCard = (c, sec, it) => mustRefs(c).has(`${sec}:${callArr(c, sec).indexOf(it)}`);
+// 「4회」는 같은 실수를 한 횟수 전체라, 펼쳐 보이는 말 수(카드로 정리된 장면)와 다를 수 있다 → 말로 풀어 쓴다
+const badgeText = b => b.replace(/^(\d+)회$/, '이번 통화 $1번');
+// ✗/✓ 표시와 문장을 두 칸으로 나눈다. 문장은 반드시 <span> 하나로 감싼다 — 안 감싸면 ruby 와 가나 조각이
+// 그리드 칸을 하나씩 차지해 글자가 세로로 한 줄씩 쪼개진다(2026-10-01 실제로 그렇게 보였다).
+const evPair = (cls, mark, html) => `<p class="${cls}"><b>${mark}</b><span>${html}</span></p>`;
+const evShort = (sec, it) => sec === 'fix'
+  ? evPair('ev-x', '✗', ruby(it.said || '')) + evPair('ev-o', '✓', ruby(it.natural || ''))
+  : sec === 'stuck'
+    ? `<p class="ev-want">하려던 말 · ${esc(it.wanted || '')}</p>` + evPair('ev-o', '✓', ruby(it.natural_full || ''))
+    : evPair('ev-o', '👂', ruby(it.jp_full || '')) + `<p class="ev-want">${esc(it.kr || '')}</p>`;
+const evMore = (sec, it) => {
+  const rows = [];
+  if (sec === 'fix') {
+    if (it.why) rows.push(['왜 틀렸나', `<p>${esc(it.why)}</p>`]);
+    if (it.said_full && it.natural_full) rows.push(['문장 전체', `<p class="mx">${ruby(it.said_full)}</p><p class="mo">${ruby(it.natural_full)}</p>`]);
+  } else if (sec === 'stuck') {
+    if (it.said_full) rows.push(['실제로 한 말', `<p class="mx">${ruby(it.said_full)}</p>`]);
+    if (it.key && it.key.length) rows.push(['그때 필요했던 말', keysHtml(it.key)]);
+  } else {
+    if (it.how) rows.push(['어떻게 들을까', `<p>${esc(it.how)}</p>`]);
+    if (it.key && it.key.length) rows.push(['들렸어야 할 말', keysHtml(it.key)]);
+  }
+  return rows.map(([h, b]) => `<div class="mrow"><span class="mh">${h}</span>${b}</div>`).join('');
+};
+const MUST_ORDER = ['fix', 'stuck', 'missed'];
+const mustRule = (c, m, i, open = false) => {
+  // 같은 종류끼리 붙이고(고칠 표현 → 막힌 순간 → 못 알아들음), 종류 이름은 무리 위에 한 번만 쓴다.
+  // 상자를 한 겹 더 두르면 4겹이 돼 다시 무거워지니 소제목만 둔다. 같은 종류 안에서는 통화 시각 순.
+  const items = m.refs.map(ref => refItem(c, ref)).filter(([, it]) => it)
+    .sort(([a, x], [b, y]) => MUST_ORDER.indexOf(a) - MUST_ORDER.indexOf(b) || byT(x, y));
+  const typeN = sec => items.filter(([s]) => s === sec).length;
+  return `
+    <div class="rule${isDone('callsItem', mustRuleId(c, i)) ? ' done' : ''}${open ? ' open' : ''}" data-rule-id="${esc(mustRuleId(c, i))}" data-refs="${esc(m.refs.join(','))}">
+      <div class="rule-top"><span class="rno">${i + 1}</span>
+        <div class="rule-main"><p class="rule-t jp">${ruby(m.rule)}</p>
+          <div class="badges">${(m.badges || []).map(b => `<span class="bd">${esc(badgeText(b))}</span>`).join('')}</div>
+          <div class="rule-toggle"><span class="arr">▸</span><span class="t-open">내가 실제로 한 말 ${items.length}개 보기</span><span class="t-close">접기</span></div></div>
+        <span class="rule-tools">${starBtn(mustRuleId(c, i))}${checkBtn('callsItem', mustRuleId(c, i))}</span></div>
+      <div class="rule-body">
+        ${m.why ? `<p class="rule-why">${esc(m.why)}</p>` : ''}
+        <div class="ev-group"><p class="ev-group-h">내가 실제로 한 말 · ${items.length}</p>
+        ${items.map(([sec, it], k) => `
+        ${k === 0 || items[k - 1][0] !== sec ? `<p class="ev-type">${MUST_LABEL[sec]} ${typeN(sec)}</p>` : ''}
+        <div class="ev">
+          <div class="ev-head"><span class="ev-lbl">${esc(it.t || '')}</span><span class="ev-arr">자세히 ▸</span>${starBtn(callItemId(c, sec, it))}</div>
+          ${evShort(sec, it)}
+          <div class="ev-more">${evMore(sec, it) || '<p class="mh">더 볼 설명이 없다.</p>'}</div>
+        </div>`).join('')}
+        ${m.more ? `<p class="rule-more">＋ ${esc(m.more)}</p>` : ''}</div>
+      </div>
+    </div>`;
+};
+
 // ★ 누르기. 별표 칸 안에서 해제해도 카드는 그 자리에 두고(누르자마자 사라지면 되돌리기 어렵다) 표시만 끈다.
 function wireStars(root, onChange) {
   root.querySelectorAll('.star').forEach(btn => {
@@ -2114,7 +2258,9 @@ function syncChecks(root) {
 
 // 별표한 카드를 칸별로 묶어 그린다.
 function starCardsHtml(c) {
-  const groups = CALL_SECS.map(([sec, , title]) => {
+  const rules = starredRules(c);
+  const ruleHtml = rules.length ? `<p class="star-grp">🔴 필수 규칙 ${rules.length}</p>${rules.map(([m, i]) => mustRule(c, m, i, true)).join('')}` : '';
+  const groups = ruleHtml + CALL_SECS.map(([sec, , title]) => {
     const its = callArr(c, sec).filter(it => isStar(callItemId(c, sec, it))).sort(byT);
     return its.length ? `<p class="star-grp">${title} ${its.length}</p>${its.map(it => CARD[sec](c, it)).join('')}` : '';
   }).join('');
@@ -2123,6 +2269,10 @@ function starCardsHtml(c) {
 const wireKr = root => root.querySelectorAll('.kr').forEach(p => p.onclick = () => p.classList.toggle('reveal'));
 
 function renderCallDetail(c) {
+  const must = c.must || [];
+  const mustSet = mustRefs(c);
+  const mustDoneN = () => must.filter((_, i) => isDone('callsItem', mustRuleId(c, i))).length;
+  const mustIn = sec => [...mustSet].filter(r => r.startsWith(sec + ':')).length;
   const seen = sec => callArr(c, sec).filter(it => isDone('callsItem', callItemId(c, sec, it))).length;
   const secLabel = {
     fix: () => `✏️ 고칠 표현 ${seen('fix')}/${c.fixes.length}`,
@@ -2132,8 +2282,10 @@ function renderCallDetail(c) {
     good: () => `👍 잘한 점 ${seen('good')}/${c.good.length}`,
     vocab: () => `📖 새 단어 ${seen('vocab')}/${c.vocab.length}`,
     star: () => `⭐ 별표 ${callStars(c).length}`,
+    must: () => `🔴 필수 ${mustDoneN()}/${must.length}`,
   };
   const secs = [
+    ...(must.length ? [['sec-must', secLabel.must()]] : []),
     ['sec-star', secLabel.star()],
     ['sec-fix', secLabel.fix()],
     ...(callArr(c, 'stuck').length ? [['sec-stuck', secLabel.stuck()]] : []),
@@ -2143,7 +2295,21 @@ function renderCallDetail(c) {
     ['sec-vocab', secLabel.vocab()],
     ['sec-stats', '📊 말버릇'],
   ];
-  const list = sec => [...callArr(c, sec)].sort(byT).map(it => CARD[sec](c, it)).join('');
+  const list = sec => [...callArr(c, sec)].filter(it => !isMustCard(c, sec, it)).sort(byT).map(it => CARD[sec](c, it)).join('');
+  const upLine = sec => mustIn(sec) ? `<button class="upline" data-go-must>🔴 필수에 들어간 ${mustIn(sec)}건 ↑ (필수 칸에서 보기)</button>` : '';
+  const cardTotal = CALL_SECS.reduce((n, [sec]) => n + callArr(c, sec).length, 0);
+  const restN = cardTotal - mustSet.size;
+  const mustHtml = must.length ? `
+      <h3 class="call-sec" id="sec-must">🔴 이번 필수</h3>
+      <div class="must-sum">
+        <div class="m"><b class="must-n">${must.length}개</b><small>🔴 이번 필수 · 카드 ${mustSet.size}장 · 약 ${Math.max(3, Math.round(mustSet.size * 0.3))}분</small></div>
+        <button data-go-rest><b>${restN}장</b><small>⚪ 여유 있으면 (아래 칩)</small></button>
+      </div>
+      <div class="must-prog"><span><i></i></span><em class="must-cnt"></em></div>
+      <div class="must-fin" hidden><b>🎉 오늘 필수 끝!</b><small>이 규칙들은 다음 통화에서 또 나오는지 본다. 여유 있으면 나머지 ${restN}장도.</small>
+        <br><button data-go-rest>나머지 보러 가기</button></div>
+      <p class="hint">바쁜 날은 이 칸만 보면 된다. 규칙을 누르면 실제로 한 말이 펼쳐지고, 외웠으면 ✓.</p>
+      ${must.map((m, i) => mustRule(c, m, i)).join('')}` : '';
   app.innerHTML = `
     <button class="back">← 회화 목록</button>
     <div class="detail">
@@ -2151,24 +2317,28 @@ function renderCallDetail(c) {
       <div class="meta"><span>${esc(c.date)}</span><span>${esc(c.duration)}</span><span>${esc(c.with || '')}</span></div>
       <div class="filt">${FILT.map(([k]) => `<button data-filt="${k}"></button>`).join('')}</div>
       <div class="jump">${secs.map(([id, label]) => `<button data-go="${id}">${label}</button>`).join('')}</div>
+${mustHtml}
 
       <h3 class="call-sec" id="sec-star">⭐ 별표</h3>
       <div class="star-body"></div>
 
-      <h3 class="call-sec">🔁 반복되는 실수</h3>
-      <ul class="patterns">${c.patterns.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+      ${must.length ? '' : `<h3 class="call-sec">🔁 반복되는 실수</h3>
+      <ul class="patterns">${(c.patterns || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>`}
 
       <h3 class="call-sec" id="sec-fix">✏️ 고칠 표현</h3>
+      ${upLine('fix')}
       <p class="hint">줄 친 쪽이 실제로 한 말, 굵은 쪽이 자연스러운 표현. 시각은 녹음 속 위치. ★를 누르면 ⭐ 칸에 모인다.</p>
       ${list('fix')}
 
       ${callArr(c, 'stuck').length ? `
       <h3 class="call-sec" id="sec-stuck">🧱 막힌 순간</h3>
+      ${upLine('stuck')}
       <p class="hint">말하려다 막힌 곳. 실제로 한 말은 조각마다 ✅ 맞음 · 🔸 통하지만 어색 · ❌ 틀림으로 나눴다. 그때 떠올리지 못한 말이 아래 칩에 있다.</p>
       ${list('stuck')}` : ''}
 
       ${callArr(c, 'missed').length ? `
       <h3 class="call-sec" id="sec-missed">👂 못 알아들은 순간</h3>
+      ${upLine('missed')}
       <p class="hint">상대 말을 놓친 곳. 「번역 가리기」를 켜고 ▶로 먼저 들어본 뒤 뜻을 확인해보자.</p>
       ${list('missed')}` : ''}
 
@@ -2197,7 +2367,7 @@ function renderCallDetail(c) {
     }
   };
   const wireCards = root => {
-    wireChecks(root, () => { syncChecks(app); relabel(); refreshFilter(); });
+    wireChecks(root, () => { syncChecks(app); relabel(); refreshFilter(); refreshMust(); });
     wireStars(root, relabel);
     wireKr(root);
   };
@@ -2231,6 +2401,7 @@ function renderCallDetail(c) {
     const body = panels['sec-star'].querySelector('.star-body');
     body.innerHTML = starCardsHtml(c) || '<p class="empty">아직 별표한 카드가 없다. 카드 오른쪽 위 ★를 누르면 여기로 모인다.</p>';
     wireCards(body);
+    wireRuleChecks(body);
     wireCallClips(c, body);
   };
   const showTab = (id) => {
@@ -2262,7 +2433,8 @@ function renderCallDetail(c) {
       b.textContent = `${FILT.find(([k]) => k === b.dataset.filt)[1]} ${n[b.dataset.filt]}`;
     });
     // 걸러서 빈 칸이면 한마디 남긴다
-    for (const p of Object.values(panels)) {
+    for (const [k, p] of Object.entries(panels)) {
+      if (k === 'sec-must') continue;
       const cards = [...p.querySelectorAll('.fix')];
       let msg = p.querySelector('.filt-empty');
       const shown = cards.filter(x => mode === 'all' || (mode === 'done') === x.classList.contains('done')).length;
@@ -2279,8 +2451,45 @@ function renderCallDetail(c) {
     if (e.target.closest('button, [data-clip], .kr, a')) return;
     e.target.closest('.fix.done')?.classList.toggle('open');
   });
+  // ---- 🔴 필수: 진행도·펼치기 ----
+  // 규칙 ✓ = 그 규칙의 증거 카드도 확인 처리(안 하면 「안 한 것」 숫자에 영영 남는다)
+  function wireRuleChecks(root) {
+    root.querySelectorAll('.rule').forEach(r => {
+      const b = r.querySelector('.rule-tools > .chk'), base = b.onclick;
+      b.onclick = e => {
+        base(e);
+        const on = isDone('callsItem', r.dataset.ruleId);
+        r.dataset.refs.split(',').forEach(ref => setDone('callsItem', `${c.id}:${ref}`, on));
+        syncChecks(app); relabel(); refreshFilter(); refreshMust();
+      };
+    });
+  }
+  function refreshMust() {
+    if (!must.length) return;
+    const n = mustDoneN(), all = n === must.length;
+    app.querySelectorAll('.rule').forEach(r => r.classList.toggle('done', isDone('callsItem', r.dataset.ruleId)));
+    detail.querySelector('.must-prog i').style.width = (n / must.length * 100) + '%';
+    detail.querySelector('.must-cnt').textContent = `${n} / ${must.length}`;
+    detail.querySelector('.must-sum .m').classList.toggle('all', all);
+    detail.querySelector('.must-n').textContent = all ? `${n}/${must.length} ✓` : `${must.length}개`;
+    detail.querySelector('.must-fin').hidden = !all;
+  }
+  detail.addEventListener('click', e => {
+    if (e.target.closest('[data-go-must]')) { showTab('sec-must'); return; }
+    if (e.target.closest('[data-go-rest]')) { showTab('sec-fix'); return; }
+    if (e.target.closest('button, [data-clip], .kr, a')) return;
+    const ev = e.target.closest('.ev');
+    if (ev) { ev.classList.toggle('show'); return; }
+    const head = e.target.closest('.rule-main');
+    if (head) head.closest('.rule').classList.toggle('open');
+  });
+  wireRuleChecks(app);
+  // 처음엔 아직 안 한 첫 규칙만 펼쳐 둔다 — 무엇을 보면 되는지 바로 보이게
+  app.querySelector('.rule:not(.done)')?.classList.add('open');
+  refreshMust();
+  // 필수가 있는 노트는 늘 필수 칸에서 시작한다(「먼저 보여야」가 이 기능의 목적)
   const saved = localStorage.getItem('callsTab');
-  showTab(panels[saved] ? saved : 'sec-fix');
+  showTab(must.length ? 'sec-must' : panels[saved] ? saved : 'sec-fix');
 }
 
 // ⭐ 별표 모음 — 모든 통화에서 별표한 카드를 통화별로 모아 본다.
