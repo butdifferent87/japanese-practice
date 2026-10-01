@@ -297,6 +297,39 @@
   .ci-ex.ng .jp { color: var(--muted); }
   .ci-try b { display: block; font-size: 11.5px; color: var(--accent); }
   .ci-try .jp { font-size: 14.5px; font-weight: 600; margin: 0; }
+  /* 회화 목록 맨 위: 지금 고칠 것 */
+  .fboard { background: var(--card); border: 1px solid var(--stroke); border-left: 4px solid #C8463C; border-radius: 14px;
+    padding: 12px 14px 8px; margin: 0 0 16px; box-shadow: var(--shadow); }
+  .fb-h { margin: 0 0 6px; font-size: 16px; font-weight: 800; }
+  .fb-h b { color: #C8463C; margin-left: 2px; }
+  .fb-h small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .fb-i { border-top: 1px dashed var(--stroke); padding: 9px 0; cursor: pointer; }
+  .fb-line { display: flex; align-items: baseline; gap: 8px; }
+  .fb-no { flex: none; font-size: 13px; font-weight: 800; color: #C8463C; min-width: 16px; }
+  .fb-rule { flex: 1; font-size: 15px; font-weight: 700; margin: 0; }
+  .fb-bd { flex: none; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 1px 8px; background: var(--stroke); color: var(--muted); }
+  .fb-bd.hot { background: rgba(200,70,60,.10); color: #C8463C; }
+  .fb-last { margin: 3px 0 0 24px; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fb-last .jp { font-size: 13px; margin: 0; }
+  .fb-i.show .fb-last { display: none; }
+  .fb-more { display: none; margin: 8px 0 2px 24px; padding: 9px 11px; border-radius: 9px;
+    background: color-mix(in srgb, var(--text) 5%, var(--card)); font-size: 13.5px; }
+  .fb-i.show .fb-more { display: block; }
+  .fb-more p { margin: 0; }
+  .fb-more p + p { margin-top: 6px; }
+  .fb-why::before { content: "왜? "; font-weight: 700; color: #C8463C; }
+  .fb-note { color: var(--muted); }
+  .fb-more strong { color: var(--text); }
+  .fb-go { margin-top: 9px; font-size: 12.5px; }
+  .fb-fold { border-top: 1px dashed var(--stroke); padding: 8px 0 2px; }
+  .fb-fold-h { margin: 0; font-size: 13.5px; font-weight: 700; color: var(--muted); cursor: pointer; }
+  .fb-fold-h .arr { display: inline-block; margin-left: 6px; transition: transform .15s; }
+  .fb-fold.show .fb-fold-h .arr { transform: rotate(90deg); }
+  .fb-fold-b { display: none; padding: 6px 0 4px; }
+  .fb-fold.show .fb-fold-b { display: block; }
+  .fb-sub { margin: 0; padding: 5px 0; font-size: 14px; }
+  .fb-sub .jp { margin: 0; }
+  .fb-try { display: block; font-size: 12.5px; color: var(--muted); }
   .upline { display: block; width: 100%; text-align: left; font-size: 13px; font-weight: 700; color: #C8463C;
     background: rgba(200,70,60,.08); border: 0; border-radius: 10px; padding: 9px 12px; margin: 0 0 12px; }
   /* 후리가나가 한자보다 길 때 한자 사이가 벌어지지 않게 (예: 状況 → 「状  況」) */
@@ -2084,9 +2117,71 @@ function renderCallsLock() {
   input.onkeydown = e => { if (e.key === 'Enter') open(); };
 }
 
+// ---- 🔴 지금 고칠 것 (통화 전체) ----
+// 고질 실수는 통화 하나가 아니라 사람에게 붙는다(유저: "노트를 하나씩 안 들어가 봐도 중요한 걸 먼저").
+// 그래서 회화 목록 맨 위에 둔다. 따로 저장하는 데이터는 없다 — 가장 최근 통화의 carry(지난 필수 판정)와
+// must(이번 필수)를 합쳐서 그린다:
+//   🔴 carry 「또 틀림」 → 연속 통화 수 많은 순. 이번 필수에 같은 규칙이 있으면(must_idx) 한 줄로 합친다.
+//   🔴 이번 필수 중 위에 안 합쳐진 것 → 그다음.
+//   ⚪ carry 「기회 없음」(써볼 것) · 🎓 모든 통화의 「졸업」 → 접어 둔다.
+function fixBoard() {
+  const latest = (CALLS || []).find(c => c.must && c.must.length);
+  if (!latest) return null;
+  const items = (latest.carry && latest.carry.items) || [];
+  const hot = [], used = new Set();
+  for (const x of items.filter(x => x.v === 'again')) {
+    const m = x.must_idx != null ? latest.must[x.must_idx] : null;
+    if (x.must_idx != null) used.add(x.must_idx);
+    // 이번 필수에 없는 규칙은 처음 나왔던 통화의 필수에서 「왜」를 찾는다. 판정 메모(note)를 「왜?」로 쓰면 뜻이 섞인다.
+    const origin = m || CALLS.flatMap(c => c.must || []).find(r => r.rule === x.rule);
+    hot.push({ rule: x.rule, streak: (x.streak || 1) + 1, why: origin ? origin.why : '', note: x.note,
+      ng: x.ng_ex || [], ok: x.ok_ex || [], call: latest });
+  }
+  hot.sort((a, b) => b.streak - a.streak);
+  latest.must.forEach((m, i) => {
+    if (used.has(i)) return;
+    const ex = m.refs.map(r => refItem(latest, r)).filter(([s, it]) => it && s === 'fix').slice(0, 2)
+      .map(([, it]) => ({ jp: it.said, fixed: it.natural, t: it.t }));
+    hot.push({ rule: m.rule, streak: 0, badges: m.badges || [], why: m.why, ng: ex, ok: [], call: latest });
+  });
+  const none = items.filter(x => x.v === 'none');
+  const grad = CALLS.flatMap(c => ((c.carry && c.carry.items) || []).filter(x => x.v === 'grad').map(x => ({ ...x, at: c.date })));
+  return { latest, hot, none, grad };
+}
+const shortDate = d => (d || '').slice(5).replace('-', '/');
+function fixBoardHtml() {
+  const b = fixBoard();
+  if (!b) return '';
+  const row = (x, k) => `
+    <div class="fb-i">
+      <div class="fb-line"><span class="fb-no">${k + 1}</span><span class="fb-rule jp">${ruby(x.rule)}</span>
+        <span class="fb-bd${x.streak ? ' hot' : ''}">${x.streak ? `${'🔴'.repeat(Math.min(x.streak, 3))} ${x.streak}통화 연속` : '최근 통화'}</span></div>
+      ${x.ng[0] ? `<p class="fb-last">최근 · <span class="jp">${esc(x.ng[0].jp)}</span></p>` : ''}
+      <div class="fb-more">
+        ${x.why ? `<p class="fb-why">${esc(x.why)}</p>` : ''}
+        ${x.note ? `<p class="fb-note">${esc(x.note)}</p>` : ''}
+        ${x.ng.map(e => `<p class="ci-ex ng"><b>✗</b><span class="jp">${esc(e.jp)}${e.fixed ? ` → <strong>${esc(e.fixed)}</strong>` : ''}</span><em>${esc(e.t || '')}</em></p>`).join('')}
+        ${x.ok.map(e => `<p class="ci-ex ok"><b>✓</b><span class="jp">${esc(e.jp)}</span><em>${esc(e.t || '')}</em></p>`).join('')}
+        <button class="fb-go" data-go-call="${esc(x.call.id)}">${shortDate(x.call.date)} 통화 노트에서 보기 →</button>
+      </div>
+    </div>`;
+  const fold = (cls, title, list, body) => list.length ? `
+    <div class="fb-fold ${cls}"><p class="fb-fold-h">${title} <b>${list.length}</b><span class="arr">▸</span></p>
+      <div class="fb-fold-b">${body}</div></div>` : '';
+  return `
+    <section class="fboard">
+      <p class="fb-h">🔴 지금 고칠 것 <b>${b.hot.length}</b><small>통화 ${CALLS.length}개 기준 · 새 통화가 들어오면 다시 매긴다</small></p>
+      ${b.hot.map(row).join('')}
+      ${fold('fb-none', '⚪ 쓸 기회가 없었던 것', b.none, b.none.map(x => `
+        <p class="fb-sub"><span class="jp">${ruby(x.rule)}</span>${x.try ? `<span class="fb-try">써보기 · <span class="jp">${ruby(x.try)}</span></span>` : ''}</p>`).join(''))}
+      ${fold('fb-grad', '🎓 졸업', b.grad, b.grad.map(x => `
+        <p class="fb-sub"><span class="jp">${ruby(x.rule)}</span><span class="fb-try">${shortDate(x.at)} 통화에서 맞게 씀${x.ok_ex && x.ok_ex[0] ? ` · <span class="jp">${esc(x.ok_ex[0].jp)}</span>` : ''}</span></p>`).join(''))}
+    </section>`;
+}
+
 function renderCallsList() {
   const starN = callStarTotal();
-  app.innerHTML = (starN ? `<button class="starall" data-go-star>⭐ 별표 모음 ${starN}</button>` : '') +
+  app.innerHTML = fixBoardHtml() + (starN ? `<button class="starall" data-go-star>⭐ 별표 모음 ${starN}</button>` : '') +
     (CALLS.length ? '<div class="grid">' + CALLS.map(c => `
     <div class="item plain${isDone('calls', c.id) ? ' done' : ''}" data-id="${esc(c.id)}">
       <div>
@@ -2097,6 +2192,12 @@ function renderCallsList() {
     </div>`).join('') + '</div>'
     : '<p class="empty">아직 회화 노트 없음.</p>');
   app.querySelectorAll('.item').forEach(el => el.onclick = () => { location.hash = 'calls/' + el.dataset.id; });
+  app.querySelectorAll('.fb-i').forEach(el => el.onclick = e => {
+    const go = e.target.closest('[data-go-call]');
+    if (go) { location.hash = 'calls/' + go.dataset.goCall; return; }
+    if (getSelection().isCollapsed) el.classList.toggle('show');
+  });
+  app.querySelectorAll('.fb-fold-h').forEach(h => h.onclick = () => h.parentElement.classList.toggle('show'));
   const sa = app.querySelector('[data-go-star]');
   if (sa) sa.onclick = () => { location.hash = 'calls/star'; };
   wireChecks(app, () => updateCount('calls'));
@@ -2372,7 +2473,6 @@ function renderCallDetail(c) {
   const restN = cardTotal - mustSet.size;
   const mustHtml = must.length ? `
       <h3 class="call-sec" id="sec-must">🔴 이번 필수</h3>
-      ${carryHtml(c)}
       <div class="must-sum">
         <div class="m"><b class="must-n">${must.length}개</b><small>🔴 이번 필수 · 카드 ${mustSet.size}장 · 약 ${Math.max(3, Math.round(mustSet.size * 0.3))}분</small></div>
         <button data-go-rest><b>${restN}장</b><small>⚪ 여유 있으면 (아래 칩)</small></button>
