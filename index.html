@@ -248,6 +248,7 @@
   .ev-head { display: flex; align-items: center; font-size: 11.5px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
   .ev-arr { margin-left: auto; color: var(--accent); }
   .ev.ev-static { cursor: default; }
+  .ev-kr { font-size: 13px; color: var(--muted); margin: 1px 0 2px; }
   /* 상자마다 ★만 둔다 — 확인(✓)은 규칙 단위, ★는 「이 문장만 다시 보기」(⭐ 칸에 모인다) */
   .ev-head .star { margin-left: 10px; }
   .ev.show .ev-arr { visibility: hidden; }
@@ -2220,7 +2221,7 @@ function fixBoard() {
     if (used.has(i)) return;
     const n = +((m.badges || []).join(' ').match(/(\d+)회/) || [])[1] || m.refs.length;
     const ngEx = m.refs.map(r => refItem(latest, r)).filter(([sec, it]) => it && sec === 'fix').slice(0, 2)
-      .map(([, it]) => ({ jp: it.said, fixed: it.natural, t: it.t }));
+      .map(([, it]) => ({ jp: it.said_full || it.said, fixed: it.natural_full || it.natural, kr: it.kr || '', t: it.t }));
     all.push({ rule: m.rule, kind: 'new', run: 1, ng: n, why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`] });
   });
   // ③ 「최근」: 마지막 통화에 새로 나온 것(new) > 이어진 것(again) > 보류(none)
@@ -2311,11 +2312,12 @@ function renderFixStudy(skip = false) {
   // ✗ 틀린 말 아래 줄에 ✓ 고친 말 — 오른쪽 화살표로 붙이면 눈이 옆으로 가서 읽기 어렵다(유저)
   const exLines = x => [
     ...(x.ngEx.length ? [`<p class="ev-type">틀린 말 ${x.ngEx.length}</p>`] : []),
+    // 맨 위에 「무슨 말을 하려던 건지」(한국어) — 일본어만으론 맥락을 모른다(유저)
     ...x.ngEx.map(e => `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span></div>
-      ${evPair('ev-x', '✗', esc(e.jp))}${e.fixed ? evPair('ev-o', '✓', esc(e.fixed)) : ''}</div>`),
+      ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}${evPair('ev-x', '✗', ruby(e.jp || ''))}${e.fixed ? evPair('ev-o', '✓', ruby(e.fixed)) : ''}</div>`),
     ...(x.okEx.length ? [`<p class="ev-type">맞게 쓴 말 ${x.okEx.length}</p>`] : []),
     ...x.okEx.map(e => `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span></div>
-      ${evPair('ev-o', '✓', esc(e.jp))}</div>`)].join('');
+      ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}${evPair('ev-o', '✓', ruby(e.jp || ''))}</div>`)].join('');
   const callBtns = x => [...new Set(x.links.map(l => l.split(':')[0]))].sort().map(cid =>
     `<button class="fb-go" data-go-call="${esc(cid)}">${shortDate(cid)} 노트</button>`).join('');
   const habit = (x, k) => `
