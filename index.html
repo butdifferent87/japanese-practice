@@ -248,6 +248,8 @@
   .ev-head { display: flex; align-items: center; font-size: 11.5px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
   .ev-arr { margin-left: auto; color: var(--accent); }
   .ev.ev-static { cursor: default; }
+  .dx { text-decoration: underline wavy rgba(200,70,60,.85); text-underline-offset: 5px; text-decoration-thickness: 1.5px; color: var(--text); }
+  .do { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-soft); border-radius: 4px; color: var(--accent); }
   .ev-kr { font-size: 13px; color: var(--muted); margin: 1px 0 2px; }
   /* 상자마다 ★만 둔다 — 확인(✓)은 규칙 단위, ★는 「이 문장만 다시 보기」(⭐ 칸에 모인다) */
   .ev-head .star { margin-left: 10px; }
@@ -2314,7 +2316,7 @@ function renderFixStudy(skip = false) {
     ...(x.ngEx.length ? [`<p class="ev-type">틀린 말 ${x.ngEx.length}</p>`] : []),
     // 맨 위에 「무슨 말을 하려던 건지」(한국어) — 일본어만으론 맥락을 모른다(유저)
     ...x.ngEx.map(e => `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span></div>
-      ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}${evPair('ev-x', '✗', ruby(e.jp || ''))}${e.fixed ? evPair('ev-o', '✓', ruby(e.fixed)) : ''}</div>`),
+      ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}${e.fixed ? (([x, o]) => evPair('ev-x', '✗', x) + evPair('ev-o', '✓', o))(diffPair(e.jp, e.fixed)) : evPair('ev-x', '✗', ruby(e.jp || ''))}</div>`),
     ...(x.okEx.length ? [`<p class="ev-type">맞게 쓴 말 ${x.okEx.length}</p>`] : []),
     ...x.okEx.map(e => `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span></div>
       ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}${evPair('ev-o', '✓', ruby(e.jp || ''))}</div>`)].join('');
@@ -2565,11 +2567,35 @@ const refItem = (c, ref) => { const [sec, i] = ref.split(':'); return [sec, call
 const isMustCard = (c, sec, it) => mustRefs(c).has(`${sec}:${callArr(c, sec).indexOf(it)}`);
 // 「4회」는 같은 실수를 한 횟수 전체라, 펼쳐 보이는 말 수(카드로 정리된 장면)와 다를 수 있다 → 말로 풀어 쓴다
 const badgeText = b => b.replace(/^(\d+)회$/, '이번 통화 $1번');
+// ✗ 틀린 문장 / ✓ 고친 문장에서 달라진 곳만 표시한다(유저: 긴 문장은 어디가 틀렸는지 한눈에 안 보인다).
+// 후리가나 덩어리 {漢字|よみ} 는 한 덩어리로 비교한다(읽기만 다른 경우는 없다고 본다). 문장 부호·공백도 글자로 센다.
+function diffPair(wrong, right) {
+  const tok = s => [...(s || '').matchAll(/\{([^|{}]+)\|([^|{}]+)\}|[\s\S]/g)].map(m => m[1]
+    ? { k: m[1], h: `<ruby>${esc(m[1])}<rt>${esc(m[2])}</rt></ruby>` } : { k: m[0], h: esc(m[0]) });
+  const a = tok(wrong), b = tok(right), n = a.length, m = b.length;
+  if (!n || !m || n * m > 40000) return [ruby(wrong || ''), ruby(right || '')];
+  const L = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
+    L[i][j] = a[i].k === b[j].k ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const ka = new Array(n).fill(false), kb = new Array(m).fill(false);
+  for (let i = 0, j = 0; i < n && j < m;) {
+    if (a[i].k === b[j].k) { ka[i++] = kb[j++] = true; }
+    else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++;
+  }
+  // 달라진 덩어리마다 감싼다. 문장 부호·공백만 다른 덩어리는 감싸지 않는다(눈만 어지럽다)
+  const PUNCT = /^[\s、。，．,.!?！？…・「」『』〜ー（）()]+$/;
+  const out = (t, keep, cls) => { let h = '', run = [];
+    const flush = () => { if (!run.length) return; const txt = run.map(x => x.k).join('');
+      h += PUNCT.test(txt) ? run.map(x => x.h).join('') : `<span class="${cls}">${run.map(x => x.h).join('')}</span>`; run = []; };
+    t.forEach((x, i) => { if (keep[i]) { flush(); h += x.h; } else run.push(x); });
+    flush(); return h; };
+  return [out(a, ka, 'dx'), out(b, kb, 'do')];
+}
 // ✗/✓ 표시와 문장을 두 칸으로 나눈다. 문장은 반드시 <span> 하나로 감싼다 — 안 감싸면 ruby 와 가나 조각이
 // 그리드 칸을 하나씩 차지해 글자가 세로로 한 줄씩 쪼개진다(2026-10-01 실제로 그렇게 보였다).
 const evPair = (cls, mark, html) => `<p class="${cls}"><b>${mark}</b><span>${html}</span></p>`;
 const evShort = (sec, it) => sec === 'fix'
-  ? evPair('ev-x', '✗', ruby(it.said || '')) + evPair('ev-o', '✓', ruby(it.natural || ''))
+  ? (([x, o]) => evPair('ev-x', '✗', x) + evPair('ev-o', '✓', o))(diffPair(it.said, it.natural))
   : sec === 'stuck'
     ? `<p class="ev-want">하려던 말 · ${esc(it.wanted || '')}</p>` + evPair('ev-o', '✓', ruby(it.natural_full || ''))
     : evPair('ev-o', '👂', ruby(it.jp_full || '')) + `<p class="ev-want">${esc(it.kr || '')}</p>`;
@@ -2577,7 +2603,7 @@ const evMore = (sec, it) => {
   const rows = [];
   if (sec === 'fix') {
     if (it.why) rows.push(['왜 틀렸나', `<p>${esc(it.why)}</p>`]);
-    if (it.said_full && it.natural_full) rows.push(['문장 전체', `<p class="mx">${ruby(it.said_full)}</p><p class="mo">${ruby(it.natural_full)}</p>`]);
+    if (it.said_full && it.natural_full) { const [x, o] = diffPair(it.said_full, it.natural_full); rows.push(['문장 전체', `<p class="mx">${x}</p><p class="mo">${o}</p>`]); }
   } else if (sec === 'stuck') {
     if (it.said_full) rows.push(['실제로 한 말', `<p class="mx">${ruby(it.said_full)}</p>`]);
     if (it.key && it.key.length) rows.push(['그때 필요했던 말', keysHtml(it.key)]);
