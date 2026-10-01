@@ -256,6 +256,10 @@
   .do { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-soft); border-radius: 4px; color: var(--accent); }
   .ev-s { font-size: 15px; margin: 2px 0 0; }
   .hit { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-soft); border-radius: 4px; color: var(--accent); font-weight: 700; }
+  .dz { text-decoration: underline dotted rgba(230,150,0,.9); text-underline-offset: 5px; text-decoration-thickness: 2px; }
+  .ev-why { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); }
+  .ev-why li { margin: 0 0 3px; }
+  .ev-also span { font-weight: 500; }
   .ev-also { font-size: 11.5px; font-weight: 700; color: var(--muted); margin: 8px 0 0; padding-top: 6px; border-top: 1px dashed var(--stroke); }
   body:not(.no-furi) .ev-s { line-height: 2; }
   .ev-okline { font-size: 13px; color: var(--accent); font-weight: 600; margin: 4px 0 0; }
@@ -2337,7 +2341,8 @@ function renderFixStudy(skip = false) {
     ...x.okEx.map(e => { const [sent, fixed] = okPair(e.jp, e.hit, e.fixed); return `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span></div>
       ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}<p class="ev-s"><span>${sent}</span></p>
       ${e.hit ? `<p class="ev-okline"><b>✓</b>${e.vs ? `「${esc(e.vs)}」 대신 ` : ''}「${esc(e.hit)}」 — 여기를 맞게 썼다</p>` : ''}
-      ${fixed ? `<p class="ev-also">다른 곳도 고치면</p>${evPair('ev-o', '✓', fixed)}` : ''}</div>`; })].join('');
+      ${fixed ? `<p class="ev-also">다른 곳도 다듬으면 <span>(이 규칙과는 상관없는 곳)</span></p>${evPair('ev-o', '✓', fixed)}
+        ${(e.why || []).length ? `<ul class="ev-why">${e.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}` : ''}</div>`; })].join('');
   const callBtns = x => [...new Set(x.links.map(l => l.split(':')[0]))].sort().map(cid =>
     `<button class="fb-go" data-go-call="${esc(cid)}">${shortDate(cid)} 노트</button>`).join('');
   const habit = (x, k) => `
@@ -2622,7 +2627,7 @@ function okPair(jp, hit, fixed) {
   a.forEach((x, i) => { const s0 = pos; pos += x.k.length; inHit[i] = at >= 0 && pos > at && s0 < at + hit.length; });
   if (!fixed) return [wrapRuns(a, i => inHit[i] ? 'hit' : ''), ''];
   const b = rubyToks(fixed), [ka, kb] = lcsKeep(a, b);
-  return [wrapRuns(a, i => inHit[i] ? 'hit' : ka[i] ? '' : 'dx'), wrapRuns(b, i => kb[i] ? '' : 'do')];
+  return [wrapRuns(a, i => inHit[i] ? 'hit' : ka[i] ? '' : 'dz'), wrapRuns(b, i => kb[i] ? '' : 'do')];
 }
 // 틀림 ❌ / 어색함 🔸 — 유저: 문법은 맞는데 말투만 어색한 것까지 ✗로 똑같이 보이면 헷갈린다.
 // 판정 예문(ng_ex)은 lv 필드, 고칠 표현 카드는 조각 판정(parts)에 ❌가 하나라도 있으면 틀림, 없으면 어색함.
