@@ -294,6 +294,7 @@
   .ev-more .keys { margin-top: 2px; }
   .rule-more { font-size: 12.5px; color: var(--muted); margin: 0 2px 8px; }
   .bd.hot { background: #C8463C; color: #fff; }
+  .bd.soft { background: rgba(230,150,0,.14); color: #B26A00; margin-right: 4px; }
   /* 지난 통화 필수 판정 */
   .carry { border: 1px solid var(--stroke); border-radius: 12px; background: var(--card); padding: 11px 12px 6px; margin: 14px 0 4px; }
   .carry-h { margin: 0 0 7px; font-size: 14.5px; font-weight: 700; }
@@ -2244,13 +2245,24 @@ function fixBoard() {
   latest.must.forEach((m, i) => {
     if (used.has(i)) return;
     const n = +((m.badges || []).join(' ').match(/(\d+)회/) || [])[1] || m.refs.length;
-    const ngEx = m.refs.map(r => refItem(latest, r)).filter(([sec, it]) => it && sec === 'fix').slice(0, 2)
+    const ev = m.refs.map(r => refItem(latest, r)).filter(([, it]) => it);
+    const ngEx = ev.filter(([sec]) => sec === 'fix').slice(0, 2)
       .map(([, it]) => ({ jp: it.said_full || it.said, fixed: it.natural_full || it.natural, kr: it.kr || '', t: it.t, lv: fixLv(it) }));
-    all.push({ rule: m.rule, kind: 'new', run: 1, ng: n, why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`] });
+    // 무게용 심각도: 고칠 표현·막힌 순간은 조각 판정으로, 못 알아들은 순간은 틀림으로 본다
+    const lvs = ev.map(([sec, it]) => sec === 'missed' ? 'bad' : fixLv(it));
+    all.push({ rule: m.rule, kind: 'new', run: 1, ng: n, why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`], lvs });
   });
-  // ③ 「최근」: 마지막 통화에 새로 나온 것(new) > 이어진 것(again) > 보류(none)
+  // 순위 점수(유저 확정 2026-10-01): 연속 통화 수 × 무게 + 마지막 통화 횟수 × 0.1(최대 0.5).
+  //   무게 = 마지막 통화에 ❌ 틀림이 하나라도 있으면 1, 🔸 어색함뿐이면 0.5.
+  //   어색함은 반 몫이지만 오래 반복되거나 한 통화에 자주 나오면 결국 틀림과 같은 급으로 올라온다.
+  for (const x of all) {
+    const lvs = x.lvs || x.ngEx.map(e => e.lv || 'bad');
+    x.soft = x.kind !== 'none' && lvs.length > 0 && lvs.every(l => l === 'meh');
+    x.score = x.run * (x.soft ? 0.5 : 1) + Math.min(x.ng, 5) * 0.1;
+  }
+  // 같은 점수면 「최근」: 마지막 통화에 새로 나온 것(new) > 이어진 것(again) > 보류(none)
   const fresh = { new: 2, again: 1, none: 0 };
-  all.sort((a, b) => b.run - a.run || b.ng - a.ng || fresh[b.kind] - fresh[a.kind]);
+  all.sort((a, b) => b.score - a.score || fresh[b.kind] - fresh[a.kind]);
   all.forEach(x => { x.key = ruleKey(x.rule); x.id = `fix:${latest.id}:${x.key}`; });
   // 졸업 목록: 그 뒤 통화에서 다시 틀린(relapse) 규칙은 뺀다 — 다시 맞게 써야 또 졸업
   const relapses = CALLS.flatMap(c => ((c.carry && c.carry.items) || []).filter(x => x.v === 'relapse').map(x => [x.rule, c.date]));
@@ -2259,8 +2271,9 @@ function fixBoard() {
   return { latest, all, top: all.slice(0, FIX_N), wait: all.slice(FIX_N), grad };
 }
 const shortDate = d => (d || '').slice(5).replace('-', '/');
-const fxBadge = x => x.relapse ? `<span class="bd hot">🔁 졸업 후 다시 틀림</span>` : x.kind === 'again' ? `<span class="bd hot">${'🔴'.repeat(Math.min(x.run, 3))} ${x.run}통화 연속</span>`
-  : x.kind === 'new' ? '<span class="bd">최근 통화에 새로</span>' : '<span class="bd g">⚪ 쓸 기회 없었음</span>';
+const fxBadge = x => (x.soft ? '<span class="bd soft">🔸 말투(어색함)</span>' : '')
+  + (x.relapse ? `<span class="bd hot">🔁 졸업 후 다시 틀림</span>` : x.kind === 'again' ? `<span class="bd hot">${'🔴'.repeat(Math.min(x.run, 3))} ${x.run}통화 연속</span>`
+  : x.kind === 'new' ? '<span class="bd">최근 통화에 새로</span>' : '<span class="bd g">⚪ 쓸 기회 없었음</span>');
 
 // ---- 고칠 것 대기열: 10개씩 묶음 ----
 // 순위(fixBoard)는 통화 판정 때만 바뀌지만, 보여주는 묶음은 공부하면서 넘어간다(유저, 2026-10-01).
