@@ -2319,6 +2319,13 @@ function fixBatch(fq, skip = false) {
     }
     if (pick.length) { ids = pick.map(k => fq.q[k].id); st.cursor = (pick[pick.length - 1] + 1) % n; }
     else ids = [];
+  } else if (ids.length < FIX_N) {
+    // 묶음 중간에 데이터가 바뀌어(규칙을 나누거나 졸업 처리) 저장된 항목이 사라지면 빈자리를 남기지 않는다.
+    // 대기열 맨 위(가장 급한 것)부터 안 한 것으로 채운다(2026-10-01: 10개가 8개로 줄어 보였다).
+    for (const it of fq.q) {
+      if (ids.length >= FIX_N) break;
+      if (!ids.includes(it.id) && !isDone('callsItem', it.id)) ids.push(it.id);
+    }
   }
   st.ids = ids;
   try { localStorage.setItem(BATCH_KEY, JSON.stringify(st)); } catch {}
