@@ -625,7 +625,8 @@ function selectionInfo() {
   const range = sel.getRangeAt(0);
   const node = range.commonAncestorContainer;
   const el = node.nodeType === 1 ? node : node.parentElement;
-  const jp = el?.closest?.('.jp');
+  // 필수 칸의 ✗/✓ 줄·「자세히」 문장은 .jp 를 안 쓴다(크기·줄간격이 달라서) → 따로 허용
+  const jp = el?.closest?.('.jp, .ev-x > span, .ev-o > span, .ev-more .mx, .ev-more .mo');
   if (!jp) return null;
 
   const frag = range.cloneContents();
@@ -2478,6 +2479,7 @@ ${mustHtml}
     if (e.target.closest('[data-go-must]')) { showTab('sec-must'); return; }
     if (e.target.closest('[data-go-rest]')) { showTab('sec-fix'); return; }
     if (e.target.closest('button, [data-clip], .kr, a')) return;
+    if (!getSelection().isCollapsed) return;   // 드래그로 글자를 고른 건 클릭이 아니다(단어 저장 중)
     const ev = e.target.closest('.ev');
     if (ev) { ev.classList.toggle('show'); return; }
     const head = e.target.closest('.rule-main');
@@ -2613,7 +2615,7 @@ savePop.onclick = () => {
   const entry = {
     w: pendingSel.w,
     r: pendingSel.r,
-    s: cue?.dataset.jp || '',
+    s: cue?.dataset.jp || plainText(pendingSel.jp),
     h: location.hash || '#',
     label: currentLabel(),
   };
@@ -2623,13 +2625,16 @@ savePop.onclick = () => {
   hideSavePop();
   if (cornerBtns.vocab.classList.contains('on')) renderVocab();
   updateCount(cornerBtns.nhk.classList.contains('on') ? 'nhk'
-    : cornerBtns.vocab.classList.contains('on') ? 'vocab' : 'yt');
+    : cornerBtns.vocab.classList.contains('on') ? 'vocab'
+    : cornerBtns.calls.classList.contains('on') ? 'calls' : 'yt');
 };
 
+const plainText = el => { const d = el.cloneNode(true); d.querySelectorAll('rt').forEach(e => e.remove()); return d.textContent.trim(); };
 /** 지금 보고 있는 자료의 이름 — 단어장에서 어디서 나온 표현인지 알려면 필요하다. */
 function currentLabel() {
   const h = location.hash.slice(1);
   if (h.startsWith('nhk/')) return NHK[+h.slice(4)]?.group || 'NHK';
+  if (h.startsWith('calls/')) return (CALLS || []).find(c => c.id === h.slice(6))?.title || '회화 노트';
   const v = VIDEOS.find(x => x.id === h);
   return v ? v.title : '';
 }
