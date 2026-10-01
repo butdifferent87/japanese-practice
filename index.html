@@ -248,6 +248,10 @@
   .ev-head { display: flex; align-items: center; font-size: 11.5px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
   .ev-arr { margin-left: auto; color: var(--accent); }
   .ev.ev-static { cursor: default; }
+  .lv { margin-left: auto; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 0 8px; }
+  .lv-bad { background: rgba(200,70,60,.10); color: #C8463C; }
+  .lv-meh { background: rgba(230,150,0,.14); color: #B26A00; }
+  .ev-x b { font-size: 12px; }
   .dx { text-decoration: underline wavy rgba(200,70,60,.85); text-underline-offset: 5px; text-decoration-thickness: 1.5px; color: var(--text); }
   .do { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-soft); border-radius: 4px; color: var(--accent); }
   .ev-s { font-size: 15px; margin: 2px 0 0; }
@@ -2231,7 +2235,7 @@ function fixBoard() {
     if (used.has(i)) return;
     const n = +((m.badges || []).join(' ').match(/(\d+)회/) || [])[1] || m.refs.length;
     const ngEx = m.refs.map(r => refItem(latest, r)).filter(([sec, it]) => it && sec === 'fix').slice(0, 2)
-      .map(([, it]) => ({ jp: it.said_full || it.said, fixed: it.natural_full || it.natural, kr: it.kr || '', t: it.t }));
+      .map(([, it]) => ({ jp: it.said_full || it.said, fixed: it.natural_full || it.natural, kr: it.kr || '', t: it.t, lv: fixLv(it) }));
     all.push({ rule: m.rule, kind: 'new', run: 1, ng: n, why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`] });
   });
   // ③ 「최근」: 마지막 통화에 새로 나온 것(new) > 이어진 것(again) > 보류(none)
@@ -2324,10 +2328,10 @@ function renderFixStudy(skip = false) {
   const batch = fixBatch(fq, skip);
   // ✗ 틀린 말 아래 줄에 ✓ 고친 말 — 오른쪽 화살표로 붙이면 눈이 옆으로 가서 읽기 어렵다(유저)
   const exLines = x => [
-    ...(x.ngEx.length ? [`<p class="ev-type">틀린 말 ${x.ngEx.length}</p>`] : []),
+    ...(x.ngEx.length ? [`<p class="ev-type">고칠 말 ${x.ngEx.length}${['bad', 'meh'].map(l => { const n = x.ngEx.filter(e => (e.lv || 'bad') === l).length; return n ? ` · ${LV[l][0]} ${LV[l][1]} ${n}` : ''; }).join('')}</p>`] : []),
     // 맨 위에 「무슨 말을 하려던 건지」(한국어) — 일본어만으론 맥락을 모른다(유저)
-    ...x.ngEx.map(e => `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span></div>
-      ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}${e.fixed ? (([x, o]) => evPair('ev-x', '✗', x) + evPair('ev-o', '✓', o))(diffPair(e.jp, e.fixed)) : evPair('ev-x', '✗', ruby(e.jp || ''))}</div>`),
+    ...x.ngEx.map(e => { const lv = LV[e.lv || 'bad']; return `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span><span class="lv lv-${e.lv || 'bad'}">${lv[0]} ${lv[1]}</span></div>
+      ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}${e.fixed ? (([x, o]) => evPair('ev-x', lv[0], x) + evPair('ev-o', '✓', o))(diffPair(e.jp, e.fixed)) : evPair('ev-x', lv[0], ruby(e.jp || ''))}</div>`; }),
     ...(x.okEx.length ? [`<p class="ev-type">맞게 쓴 말 ${x.okEx.length}</p>`] : []),
     // 맞게 쓴 말: 문장 전체에 ✓를 달면 다른 어색한 곳까지 맞은 것처럼 보인다 → 맞은 부분만 초록, ✓는 그 부분에만
     ...x.okEx.map(e => { const [sent, fixed] = okPair(e.jp, e.hit, e.fixed); return `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span></div>
@@ -2620,11 +2624,15 @@ function okPair(jp, hit, fixed) {
   const b = rubyToks(fixed), [ka, kb] = lcsKeep(a, b);
   return [wrapRuns(a, i => inHit[i] ? 'hit' : ka[i] ? '' : 'dx'), wrapRuns(b, i => kb[i] ? '' : 'do')];
 }
+// 틀림 ❌ / 어색함 🔸 — 유저: 문법은 맞는데 말투만 어색한 것까지 ✗로 똑같이 보이면 헷갈린다.
+// 판정 예문(ng_ex)은 lv 필드, 고칠 표현 카드는 조각 판정(parts)에 ❌가 하나라도 있으면 틀림, 없으면 어색함.
+const LV = { bad: ['❌', '틀림'], meh: ['🔸', '어색함'] };
+const fixLv = it => it.parts && it.parts.length && !it.parts.some(p => p.v === 'bad') ? 'meh' : 'bad';
 // ✗/✓ 표시와 문장을 두 칸으로 나눈다. 문장은 반드시 <span> 하나로 감싼다 — 안 감싸면 ruby 와 가나 조각이
 // 그리드 칸을 하나씩 차지해 글자가 세로로 한 줄씩 쪼개진다(2026-10-01 실제로 그렇게 보였다).
 const evPair = (cls, mark, html) => `<p class="${cls}"><b>${mark}</b><span>${html}</span></p>`;
 const evShort = (sec, it) => sec === 'fix'
-  ? (([x, o]) => evPair('ev-x', '✗', x) + evPair('ev-o', '✓', o))(diffPair(it.said, it.natural))
+  ? (([x, o]) => evPair('ev-x', LV[fixLv(it)][0], x) + evPair('ev-o', '✓', o))(diffPair(it.said, it.natural))
   : sec === 'stuck'
     ? `<p class="ev-want">하려던 말 · ${esc(it.wanted || '')}</p>` + evPair('ev-o', '✓', ruby(it.natural_full || ''))
     : evPair('ev-o', '👂', ruby(it.jp_full || '')) + `<p class="ev-want">${esc(it.kr || '')}</p>`;
