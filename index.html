@@ -270,6 +270,9 @@
   body:not(.no-furi) .ev-s { line-height: 2; }
   .ev-okline { font-size: 13px; color: var(--accent); font-weight: 600; margin: 4px 0 0; }
   .ev-okline b { margin-right: 5px; }
+  /* 밑줄 범례(유저 요청) */
+  .mark-legend { font-size: 12.5px; color: var(--muted); margin: 0 0 12px; line-height: 2; }
+  .mark-legend .dx, .mark-legend .dz, .mark-legend .do { color: var(--text); }
   .ev-core { font-size: 13.5px; margin: 6px 0 0; padding-top: 6px; border-top: 1px dashed var(--stroke); }
   .ev-core b { font-size: 11px; color: var(--muted); margin-right: 6px; }
   .ev-core .jp { font-size: 14px; margin: 0; }
@@ -2410,6 +2413,7 @@ function renderFixStudy(skip = false) {
       <p class="hint">반복된 버릇 → 각 통화 필수 → 통화 세부 순서로 줄을 세워 <b>${FIX_N}개씩</b> 보여준다. 이번 묶음을 다 ✓하면 다음 ${FIX_N}개가 나온다.
         새 통화 노트가 들어오면 다시 버릇부터. 필수·세부 카드의 ✓는 그 통화 노트에도 똑같이 남는다.</p>
       <div class="must-prog"><span><i style="width:${batch.length ? bDone() / batch.length * 100 : 0}%"></i></span><em class="fx-cnt">이번 묶음 ${bDone()} / ${batch.length}</em></div>
+      <p class="mark-legend"><span class="dx">빨간 물결</span> 틀림 · <span class="dz">주황 점선</span> 어색함 · <span class="dins"></span> 빠진 자리 · <span class="do">초록</span> 고친 곳·맞게 쓴 곳</p>
       <p class="fq-all">전체 고칠 것 ${fq.q.length}개 중 <b class="fq-alln">${qDoneN(fq)}</b>개 확인</p>
       ${batch.length ? batch.map(item).join('') : '<p class="empty">고칠 것을 전부 확인했다 🎉 새 통화 노트가 들어오면 다시 채워진다.</p>'}
       ${batch.length ? `<button class="fq-skip">다음 ${FIX_N}개 보기 (이번 묶음은 다음 바퀴에)</button>` : ''}
@@ -2864,6 +2868,7 @@ function renderCallDetail(c) {
       <div class="must-fin" hidden><b>🎉 오늘 필수 끝!</b><small>이 규칙들은 다음 통화에서 또 나오는지 본다. 여유 있으면 나머지 ${restN}장도.</small>
         <br><button data-go-rest>나머지 보러 가기</button></div>
       <p class="hint">바쁜 날은 이 칸만 보면 된다. 규칙을 누르면 실제로 한 말이 펼쳐지고, 외웠으면 ✓.</p>
+      <p class="mark-legend"><span class="dx">빨간 물결</span> 틀림 · <span class="dz">주황 점선</span> 어색함 · <span class="dins"></span> 빠진 자리 · <span class="do">초록</span> 고친 곳·맞게 쓴 곳</p>
       ${(({ idx, streak }) => idx.map((i, pos) => mustRule(c, must[i], i, { pos, streak: streak[i] || 0 })).join(''))(mustOrder(c))}` : '';
   app.innerHTML = `
     <button class="back">← 회화 목록</button>
