@@ -280,6 +280,8 @@
   .nope:hover { color: #C8463C; border-color: #C8463C; }
   .ev-head .ev-arr + .nope { margin-left: 8px; }
   .ev-kr b { font-size: 11px; color: var(--muted); }
+  .hid-all { font-size: 12px; color: var(--muted); margin: 14px 2px; padding-top: 10px; border-top: 1px dashed var(--stroke); }
+  .hid-all .unhide { font-size: 11.5px; padding: 2px 9px; margin-left: 6px; }
   .hid-note { font-size: 12px; color: var(--muted); margin: 4px 2px 8px; }
   .hid-note .unhide { font-size: 11.5px; padding: 2px 9px; margin-left: 6px; }
   .ev-kr { font-size: 13px; color: var(--muted); margin: 1px 0 2px; }
@@ -2440,7 +2442,9 @@ function renderFixStudy(skip = false) {
       ${batch.length ? batch.map(item).join('') : '<p class="empty">고칠 것을 전부 확인했다 🎉 새 통화 노트가 들어오면 다시 채워진다.</p>'}
       ${batch.length ? `<button class="fq-skip">${bDone() === batch.length ? `다음 ${FIX_N}개 열기` : `다 안 끝났지만 다음 ${FIX_N}개 보기 (남은 건 다음 바퀴에)`}</button>` : ''}
       ${fold('🎓 졸업', fq.grad, fq.grad.map(x => `
-        <p class="fb-sub"><span class="jp">${ruby(x.rule)}</span><span class="fb-try">${shortDate(x.at)} 통화에서 맞게 씀${x.ok_ex && x.ok_ex[0] ? ` · <span class="jp">${esc(x.ok_ex[0].jp)}</span>` : ''}</span></p>`).join(''))}
+        <p class="fb-sub"><span class="jp">${ruby(x.rule)}</span><span class="fb-try">${shortDate(x.at)} 통화에서 맞게 씀${x.ok_ex && x.ok_ex[0] ? ` · <span class="jp">${ruby(x.ok_ex[0].jp)}</span>` : ''}${(x.hidden || []).length ? ' · 예문을 빼서 졸업' : ''}</span>${hiddenNote(x.hidden || [])}</p>`).join(''))}
+      ${(ids => ids.length ? `<p class="hid-all">이 화면에서 뺀 예문 전체 ${ids.length}개 <button class="unhide" data-unhide="${esc(ids.join(','))}">전부 되돌리기</button></p>` : '')(
+        Object.keys(doneOf('callsItem')).filter(k => k.startsWith('hide:') && isDone('callsItem', k)))}
     </div>`;
   app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
   const progress = () => {
