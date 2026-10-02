@@ -270,6 +270,9 @@
   body:not(.no-furi) .ev-s { line-height: 2; }
   .ev-okline { font-size: 13px; color: var(--accent); font-weight: 600; margin: 4px 0 0; }
   .ev-okline b { margin-right: 5px; }
+  .ev-core { font-size: 13.5px; margin: 6px 0 0; padding-top: 6px; border-top: 1px dashed var(--stroke); }
+  .ev-core b { font-size: 11px; color: var(--muted); margin-right: 6px; }
+  .ev-core .jp { font-size: 14px; margin: 0; }
   .ev-kr { font-size: 13px; color: var(--muted); margin: 1px 0 2px; }
   /* 상자마다 ★만 둔다 — 확인(✓)은 규칙 단위, ★는 「이 문장만 다시 보기」(⭐ 칸에 모인다) */
   .ev-head .star { margin-left: 10px; }
@@ -2247,7 +2250,8 @@ function fixBoard() {
     const n = +((m.badges || []).join(' ').match(/(\d+)회/) || [])[1] || m.refs.length;
     const ev = m.refs.map(r => refItem(latest, r)).filter(([, it]) => it);
     const ngEx = ev.filter(([sec]) => sec === 'fix').slice(0, 2)
-      .map(([, it]) => ({ jp: it.said_full || it.said, fixed: it.natural_full || it.natural, kr: it.kr || '', t: it.t, lv: fixLv(it) }));
+      .map(([, it]) => ({ jp: it.said_full || it.said, fixed: it.natural_full || it.natural, kr: it.kr || '', t: it.t, lv: fixLv(it),
+        parts: it.parts, core: it.said && it.natural ? [it.said, it.natural] : null }));
     // 무게용 심각도: 고칠 표현·막힌 순간은 조각 판정으로, 못 알아들은 순간은 틀림으로 본다
     const lvs = ev.map(([sec, it]) => sec === 'missed' ? 'bad' : fixLv(it));
     all.push({ rule: m.rule, kind: 'new', run: 1, ng: n, why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`], lvs });
@@ -2361,7 +2365,11 @@ function renderFixStudy(skip = false) {
     ...(x.ngEx.length ? [`<p class="ev-type">고칠 말 ${x.ngEx.length}${['bad', 'meh'].map(l => { const n = x.ngEx.filter(e => (e.lv || 'bad') === l).length; return n ? ` · ${LV[l][0]} ${LV[l][1]} ${n}` : ''; }).join('')}</p>`] : []),
     // 맨 위에 「무슨 말을 하려던 건지」(한국어) — 일본어만으론 맥락을 모른다(유저)
     ...x.ngEx.map(e => { const lv = LV[e.lv || 'bad']; return `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span><span class="lv lv-${e.lv || 'bad'}">${lv[0]} ${lv[1]}</span></div>
-      ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}${e.fixed ? (([x, o]) => evPair('ev-x', lv[0], x) + evPair('ev-o', '✓', o))(diffPair(e.jp, e.fixed)) : evPair('ev-x', lv[0], ruby(e.jp || ''))}</div>`; }),
+      ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}${e.parts
+        // 노트 카드에서 온 예문: 판정 조각으로 밑줄, 고친 문장은 그대로, 아래에 핵심 고침만 글자 비교
+        ? evPair('ev-x', lv[0], partsMarked(e.jp, e.parts)) + evPair('ev-o', '✓', ruby(e.fixed || ''))
+          + (e.core ? (([x, o]) => `<p class="ev-core"><b>핵심</b><span class="jp">${x}</span> → <span class="jp">${o}</span></p>`)(diffPair(e.core[0], e.core[1])) : '')
+        : e.fixed ? (([x, o]) => evPair('ev-x', lv[0], x) + evPair('ev-o', '✓', o))(diffPair(e.jp, e.fixed)) : evPair('ev-x', lv[0], ruby(e.jp || ''))}</div>`; }),
     ...(x.okEx.length ? [`<p class="ev-type">맞게 쓴 말 ${x.okEx.length}</p>`] : []),
     // 맞게 쓴 말: 문장 전체에 ✓를 달면 다른 어색한 곳까지 맞은 것처럼 보인다 → 맞은 부분만 초록, ✓는 그 부분에만
     ...x.okEx.map(e => { const [sent, fixed] = okPair(e.jp, e.hit, e.fixed); return `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span></div>
@@ -2657,6 +2665,24 @@ function diffPair(wrong, right) {
   const a = rubyToks(wrong), b = rubyToks(right), [ka, kb] = lcsKeep(a, b);
   return [wrapRuns(a, i => ka[i] ? '' : 'dx', ka.gaps), wrapRuns(b, i => kb[i] ? '' : 'do')];
 }
+// 문장 전체(said_full)는 글자 비교 대신 노트의 조각 판정(parts)으로 표시한다.
+// natural_full 은 말 더듬기를 빼고 다시 쓴 문장이라 글자 비교하면 맞는 곳까지 틀린 것처럼 밑줄이 생긴다
+// (2026-10-02 유저: 「集めてみようかと思った」는 맞는데 왜 틀렸다고 하냐 — 조각 판정은 ✅였다).
+function partsMarked(full, parts) {
+  const t = rubyToks(full), plain = t.map(x => x.k).join('');
+  const cls = new Array(t.length).fill('');
+  const starts = []; let pos = 0; t.forEach(x => { starts.push(pos); pos += x.k.length; });
+  let from = 0;
+  for (const p of parts || []) {
+    const txt = rubyToks(p.jp).map(x => x.k).join('');
+    const at = txt ? plain.indexOf(txt, from) : -1;
+    if (at < 0) continue;
+    from = at + txt.length;
+    if (p.v === 'ok') continue;
+    t.forEach((x, i) => { if (starts[i] < at + txt.length && starts[i] + x.k.length > at) cls[i] = p.v === 'bad' ? 'dx' : 'dz'; });
+  }
+  return wrapRuns(t, i => cls[i]);
+}
 // 맞게 쓴 말: 맞은 부분(hit)은 초록, 그 밖에 고친 형태(fixed)와 다른 곳은 물결 밑줄. fixed 쪽은 바뀐 곳만 초록.
 function okPair(jp, hit, fixed) {
   const a = rubyToks(jp), plain = a.map(x => x.k).join(''), at = hit ? plain.indexOf(hit) : -1;
@@ -2682,7 +2708,7 @@ const evMore = (sec, it) => {
   const rows = [];
   if (sec === 'fix') {
     if (it.why) rows.push(['왜 틀렸나', `<p>${esc(it.why)}</p>`]);
-    if (it.said_full && it.natural_full) { const [x, o] = diffPair(it.said_full, it.natural_full); rows.push(['문장 전체', `<p class="mx">${x}</p><p class="mo">${o}</p>`]); }
+    if (it.said_full && it.natural_full) rows.push(['문장 전체', `<p class="mx">${it.parts && it.parts.length ? partsMarked(it.said_full, it.parts) : ruby(it.said_full)}</p><p class="mo">${ruby(it.natural_full)}</p>`]);
   } else if (sec === 'stuck') {
     if (it.said_full) rows.push(['실제로 한 말', `<p class="mx">${ruby(it.said_full)}</p>`]);
     if (it.key && it.key.length) rows.push(['그때 필요했던 말', keysHtml(it.key)]);
