@@ -276,6 +276,12 @@
   .ev-core { font-size: 13.5px; margin: 6px 0 0; padding-top: 6px; border-top: 1px dashed var(--stroke); }
   .ev-core b { font-size: 11px; color: var(--muted); margin-right: 6px; }
   .ev-core .jp { font-size: 14px; margin: 0; }
+  .nope { margin-left: 8px; font-size: 11px; font-weight: 600; padding: 2px 8px; color: var(--muted); }
+  .nope:hover { color: #C8463C; border-color: #C8463C; }
+  .ev-head .ev-arr + .nope { margin-left: 8px; }
+  .ev-kr b { font-size: 11px; color: var(--muted); }
+  .hid-note { font-size: 12px; color: var(--muted); margin: 4px 2px 8px; }
+  .hid-note .unhide { font-size: 11.5px; padding: 2px 9px; margin-left: 6px; }
   .ev-kr { font-size: 13px; color: var(--muted); margin: 1px 0 2px; }
   /* 상자마다 ★만 둔다 — 확인(✓)은 규칙 단위, ★는 「이 문장만 다시 보기」(⭐ 칸에 모인다) */
   .ev-head .star { margin-left: 10px; }
@@ -2237,7 +2243,7 @@ const ruleKey = t => { let h = 0; for (const ch of t) h = (h * 31 + ch.codePoint
 function fixBoard() {
   const latest = (CALLS || []).find(c => c.must && c.must.length);
   if (!latest) return null;
-  const items = (latest.carry && latest.carry.items) || [];
+  const items = effCarry(latest);
   const all = [], used = new Set();
   const originOf = rule => CALLS.flatMap(c => c.must || []).find(r => r.rule === rule);
   for (const x of items.filter(x => x.v !== 'grad')) {
@@ -2250,28 +2256,29 @@ function fixBoard() {
     all.push({ rule: x.rule, kind: bad ? 'again' : 'none', relapse: x.v === 'relapse',
       run: x.v === 'relapse' ? Math.max(2, (x.streak || 1) + 1) : x.v === 'again' ? (x.streak || 1) + 1 : 0, ng: x.ng || 0,
       why: (m || originOf(x.rule) || {}).why || '', note: x.note || '',
-      ngEx: x.ng_ex || [], okEx: x.ok_ex || [], try: x.try || '', links });
+      ngEx: (x.ng_ex || []).map(e => ({ ...e, hideId: carryHideId(latest, x, 'ng', e) })),
+      okEx: (x.ok_ex || []).map(e => ({ ...e, hideId: carryHideId(latest, x, 'ok', e) })), hidden: x.hidden || [], try: x.try || '', links });
   }
   // 노트 카드(고칠 표현·막힌 순간)를 ✗/✓ 예문 형식으로. 막힌 순간은 실제로 한 말 → 이렇게 말하면 됨
-  const cardEx = (c, refs, n = 2) => refs.map(r => [c, ...refItem(c, r)]).filter(([, sec, it]) => it && (sec === 'fix' || sec === 'stuck')).slice(0, n)
-    .map(([cc, sec, it]) => ({ jp: it.said_full || it.said || '', fixed: it.natural_full || it.natural || '', kr: it.kr || it.wanted || '', t: it.t, lv: fixLv(it),
-      parts: it.parts, core: sec === 'fix' && it.said && it.natural ? [it.said, it.natural] : null, at: cc.date }));
+  const cardEx = (c, i, n = 2) => effRefs(c, i).map(r => [r, ...refItem(c, r)]).filter(([, sec, it]) => it && (sec === 'fix' || sec === 'stuck')).slice(0, n)
+    .map(([r, sec, it]) => ({ jp: it.said_full || it.said || '', fixed: it.natural_full || it.natural || '', kr: it.kr || it.wanted || '', t: it.t, lv: fixLv(it),
+      parts: it.parts, core: sec === 'fix' && it.said && it.natural ? [it.said, it.natural] : null, at: c.date, hideId: hideRefId(c, i, r) }));
   // 이번 통화에 예문이 없는 규칙(⚪ 쓸 기회 없음 등)은 그 규칙이 처음 필수가 된 통화의 카드를 보여준다 — 유저: 틀린 문장이 안 보인다
   for (const x of all) {
     if (x.ngEx.length) continue;
     for (const l of x.links) {
       const [cid, i] = l.split(':'), c = CALLS.find(z => z.id === cid), m = c && c.must && c.must[+i];
-      if (m) { x.ngEx = cardEx(c, m.refs); x.firstEx = true; if (x.ngEx.length) break; }
+      if (m) { x.ngEx = cardEx(c, +i); x.firstEx = true; x.hidden = [...(x.hidden || []), ...hiddenRefs(c, +i)]; if (x.ngEx.length) break; }
     }
   }
   latest.must.forEach((m, i) => {
     if (used.has(i)) return;
     const n = +((m.badges || []).join(' ').match(/(\d+)회/) || [])[1] || m.refs.length;
-    const ev = m.refs.map(r => refItem(latest, r)).filter(([, it]) => it);
-    const ngEx = cardEx(latest, m.refs);
+    const ev = effRefs(latest, i).map(r => refItem(latest, r)).filter(([, it]) => it);
+    const ngEx = cardEx(latest, i);
     // 무게용 심각도: 고칠 표현·막힌 순간은 조각 판정으로, 못 알아들은 순간은 틀림으로 본다
     const lvs = ev.map(([sec, it]) => sec === 'missed' ? 'bad' : fixLv(it));
-    all.push({ rule: m.rule, kind: 'new', run: 1, ng: n, why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`], lvs });
+    all.push({ rule: m.rule, kind: 'new', run: 1, ng: Math.max(0, n - hiddenRefs(latest, i).length), why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`], lvs, hidden: hiddenRefs(latest, i) });
   });
   // 순위 점수(유저 확정 2026-10-01): 연속 통화 수 × 무게 + 마지막 통화 횟수 × 0.1(최대 0.5).
   //   무게 = 마지막 통화에 ❌ 틀림이 하나라도 있으면 1, 🔸 어색함뿐이면 0.5.
@@ -2286,8 +2293,8 @@ function fixBoard() {
   all.sort((a, b) => b.score - a.score || fresh[b.kind] - fresh[a.kind]);
   all.forEach(x => { x.key = ruleKey(x.rule); x.id = `fix:${latest.id}:${x.key}`; });
   // 졸업 목록: 그 뒤 통화에서 다시 틀린(relapse) 규칙은 뺀다 — 다시 맞게 써야 또 졸업
-  const relapses = CALLS.flatMap(c => ((c.carry && c.carry.items) || []).filter(x => x.v === 'relapse').map(x => [x.rule, c.date]));
-  const grad = CALLS.flatMap(c => ((c.carry && c.carry.items) || []).filter(x => x.v === 'grad').map(x => ({ ...x, at: c.date })))
+  const relapses = CALLS.flatMap(c => effCarry(c).filter(x => x.v === 'relapse').map(x => [x.rule, c.date]));
+  const grad = CALLS.flatMap(c => effCarry(c).filter(x => x.v === 'grad').map(x => ({ ...x, at: c.date })))
     .filter(g => !relapses.some(([rule, at]) => rule === g.rule && at > g.at));
   return { latest, all, top: all.slice(0, FIX_N), wait: all.slice(FIX_N), grad };
 }
@@ -2312,7 +2319,7 @@ function fixQueue() {
   const q = [], covered = new Set(), mustCards = new Set();
   for (const x of b.all) { q.push({ id: x.id, tier: 1, x }); x.links.forEach(l => covered.add(l)); }
   for (const c of CALLS) (c.must || []).forEach((m, i) => {
-    m.refs.forEach(r => mustCards.add(`${c.id}:${r}`));
+    effRefs(c, i).forEach(r => mustCards.add(`${c.id}:${r}`));
     if (!covered.has(`${c.id}:${i}`)) q.push({ id: mustRuleId(c, i), tier: 2, c, m, i });
   });
   for (const c of CALLS) {
@@ -2383,19 +2390,15 @@ function renderFixStudy(skip = false) {
   const exLines = x => [
     ...(x.ngEx.length ? [`<p class="ev-type">${x.firstEx ? '처음 틀렸던 말' : '고칠 말'} ${x.ngEx.length}${['bad', 'meh'].map(l => { const n = x.ngEx.filter(e => (e.lv || 'bad') === l).length; return n ? ` · ${LV[l][0]} ${LV[l][1]} ${n}` : ''; }).join('')}</p>`] : []),
     // 맨 위에 「무슨 말을 하려던 건지」(한국어) — 일본어만으론 맥락을 모른다(유저)
-    ...x.ngEx.map(e => { const lv = LV[e.lv || 'bad']; return `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${e.at && x.firstEx ? `${shortDate(e.at)} · ` : ''}${esc(e.t || '')}</span><span class="lv lv-${e.lv || 'bad'}">${lv[0]} ${lv[1]}</span></div>
-      ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}${e.parts
-        // 노트 카드에서 온 예문: 판정 조각으로 밑줄, 고친 문장은 그대로, 아래에 핵심 고침만 글자 비교
-        ? evPair('ev-x', lv[0], partsMarked(e.jp, e.parts)) + evPair('ev-o', '✓', ruby(e.fixed || ''))
-          + (e.core ? (([x, o]) => `<p class="ev-core"><b>핵심</b><span class="jp">${x}</span> → <span class="jp">${o}</span></p>`)(diffPair(e.core[0], e.core[1])) : '')
-        : e.fixed ? (([x, o]) => evPair('ev-x', lv[0], x) + evPair('ev-o', '✓', o))(diffPair(e.jp, e.fixed)) : evPair('ev-x', lv[0], ruby(e.jp || ''))}</div>`; }),
+    ...x.ngEx.map(e => exBox({ static: true, t: e.t, at: x.firstEx ? e.at : '', lv: e.lv || 'bad', lvTag: true, kr: e.kr, ...exNgParts(e), hideId: e.hideId })),
     ...(x.okEx.length ? [`<p class="ev-type">맞게 쓴 말 ${x.okEx.length}</p>`] : []),
     // 맞게 쓴 말: 문장 전체에 ✓를 달면 다른 어색한 곳까지 맞은 것처럼 보인다 → 맞은 부분만 초록, ✓는 그 부분에만
-    ...x.okEx.map(e => { const [sent, fixed] = okPair(e.jp, e.hit, e.fixed); return `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span></div>
-      ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}<p class="ev-s"><span>${sent}</span></p>
-      ${e.hit ? `<p class="ev-okline"><b>✓</b>${e.vs ? `「${esc(e.vs)}」 대신 ` : ''}「${esc(e.hit)}」 — 여기를 맞게 썼다</p>` : ''}
-      ${fixed ? `<p class="ev-also">다른 곳도 다듬으면 <span>(이 규칙과는 상관없는 곳)</span></p>${evPair('ev-o', '✓', fixed)}
-        ${(e.why || []).length ? `<ul class="ev-why">${e.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}` : ''}</div>`; })].join('');
+    ...x.okEx.map(e => { const [sent, fixed] = okPair(e.jp, e.hit, e.fixed); return exBox({ static: true, t: e.t, kr: e.kr, hideId: e.hideId,
+      body: `<p class="ev-s"><span>${sent}</span></p>`,
+      after: (e.hit ? `<p class="ev-okline"><b>✓</b>${e.vs ? `「${esc(e.vs)}」 대신 ` : ''}「${esc(e.hit)}」 — 여기를 맞게 썼다</p>` : '')
+        + (fixed ? `<p class="ev-also">다른 곳도 다듬으면 <span>(이 규칙과는 상관없는 곳)</span></p>${evPair('ev-o', '✓', fixed)}`
+          + ((e.why || []).length ? `<ul class="ev-why">${e.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : '') : '') }); }),
+    hiddenNote(x.hidden || [])].join('');
   const callBtns = x => [...new Set(x.links.map(l => l.split(':')[0]))].sort().map(cid =>
     `<button class="fb-go" data-go-call="${esc(cid)}">${shortDate(cid)} 노트</button>`).join('');
   const habit = (x, k) => `
@@ -2408,7 +2411,7 @@ function renderFixStudy(skip = false) {
       <div class="rule-body">
         ${x.why ? `<p class="rule-why">${esc(x.why)}</p>` : ''}
         ${x.note ? `<p class="fx-note">${esc(x.note)}</p>` : ''}
-        ${x.ngEx.length || x.okEx.length ? `<div class="ev-group fx-ex"><p class="ev-group-h">내가 한 말</p>${exLines(x)}</div>` : ''}
+        ${x.ngEx.length || x.okEx.length ? `<div class="ev-group fx-ex"><p class="ev-group-h">내가 한 말</p>${exLines(x)}</div>` : hiddenNote(x.hidden || [])}
         ${x.try ? `<p class="ci-try fx-try"><b>다음 통화에서 써보기</b><span class="jp">${ruby(x.try)}</span></p>` : ''}
         <div class="fx-calls"><span>이 규칙이 나온 통화</span>${callBtns(x)}</div>
       </div>
@@ -2468,7 +2471,7 @@ function renderFixStudy(skip = false) {
         const [cid, i] = l.split(':'), c = CALLS.find(x => x.id === cid), m = c && c.must && c.must[+i];
         if (!m) continue;
         setDone('callsItem', mustRuleId(c, +i), true);
-        m.refs.forEach(ref => setDone('callsItem', `${cid}:${ref}`, true));
+        effRefs(c, +i).forEach(ref => setDone('callsItem', `${cid}:${ref}`, true));
       }
     };
   });
@@ -2643,8 +2646,43 @@ const CARD = {
 //   ① 규칙 한 줄 + 배지 + 「▸ 내가 실제로 한 말 n개 보기」
 //   ② 펼치면: 왜(한 줄 상자) + 내가 한 말마다 회색 상자(✗ 한 말 / ✓ 이렇게) — 짧은 조각만
 //   ③ 상자를 누르면: 그 상자 안 흰 칸에 설명·문장 전체만 더한다. 같은 말을 되풀이하는 카드 전체는 안 그린다.
+// ---- 「이건 아니야」: 예문을 빼고 판정을 다시 계산한다(되돌리기 가능) ----
+// 필수 규칙의 증거 카드: hide:<통화>:must:<규칙순번>:<칸:순번> — 그 규칙에서만 빠지고 원래 칸으로 돌아간다.
+// 판정 예문: hide:<통화>:carry:<규칙해시>:<ng|ok>:<시각>
+const hideRefId = (c, i, ref) => `hide:${c.id}:must:${i}:${ref}`;
+const isHidden = id => isDone('callsItem', id);
+const effRefs = (c, i) => ((c.must || [])[i] ? c.must[i].refs : []).filter(r => !isHidden(hideRefId(c, i, r)));
+const hiddenRefs = (c, i) => ((c.must || [])[i] ? c.must[i].refs : []).filter(r => isHidden(hideRefId(c, i, r))).map(r => hideRefId(c, i, r));
+const carryHideId = (c, x, kind, e) => `hide:${c.id}:carry:${ruleKey(x.rule)}:${kind}:${e.t || ''}`;
+// 판정 예문을 뺀 뒤 판정을 다시 센다: 틀림이 0이 되면 맞게 쓴 증거가 있으면 졸업, 없으면 보류. 맞게 쓴 게 0이 된 졸업은 보류.
+function effCarry(c) {
+  return ((c.carry && c.carry.items) || []).map(x => {
+    const ngH = (x.ng_ex || []).filter(e => isHidden(carryHideId(c, x, 'ng', e)));
+    const okH = (x.ok_ex || []).filter(e => isHidden(carryHideId(c, x, 'ok', e)));
+    if (!ngH.length && !okH.length) return x;
+    const ng = Math.max(0, (x.ng || 0) - ngH.length), ok = Math.max(0, (x.ok || 0) - okH.length);
+    let v = x.v, streak = x.streak;
+    if ((v === 'again' || v === 'relapse') && !ng) { v = ok ? 'grad' : 'none'; streak = 0; }
+    if (v === 'grad' && !ok) v = 'none';
+    return { ...x, v, ng, ok, streak,
+      ng_ex: (x.ng_ex || []).filter(e => !ngH.includes(e)), ok_ex: (x.ok_ex || []).filter(e => !okH.includes(e)),
+      hidden: [...ngH.map(e => carryHideId(c, x, 'ng', e)), ...okH.map(e => carryHideId(c, x, 'ok', e))] };
+  });
+}
+const hiddenNote = ids => ids.length ? `<p class="hid-note">뺀 예문 ${ids.length}개 <button class="unhide" data-unhide="${esc(ids.join(','))}">되돌리기</button></p>` : '';
+// 누르면 그 자리에서 다시 그린다(판정·순위가 바뀌므로). 스크롤 위치는 지킨다.
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-hide], [data-unhide]');
+  if (!b) return;
+  e.stopPropagation();
+  const y = scrollY;
+  if (b.dataset.hide) { setDone('callsItem', b.dataset.hide, true); toast('뺐어 — 판정을 다시 계산했다 (카드 아래 「되돌리기」)'); }
+  else b.dataset.unhide.split(',').forEach(id => setDone('callsItem', id, false));
+  route();
+  requestAnimationFrame(() => scrollTo(0, y));
+}, true);
 const MUST_LABEL = { fix: '고칠 표현', stuck: '막힌 순간', missed: '못 알아들음' };
-const mustRefs = c => new Set((c.must || []).flatMap(m => m.refs));
+const mustRefs = c => new Set((c.must || []).flatMap((m, i) => effRefs(c, i)));
 const mustRuleId = (c, i) => `${c.id}:must:${i}`;
 const refItem = (c, ref) => { const [sec, i] = ref.split(':'); return [sec, callArr(c, sec)[+i]]; };
 const isMustCard = (c, sec, it) => mustRefs(c).has(`${sec}:${callArr(c, sec).indexOf(it)}`);
@@ -2725,12 +2763,35 @@ const fixLv = it => it.parts && it.parts.length && !it.parts.some(p => p.v === '
 // ✗/✓ 표시와 문장을 두 칸으로 나눈다. 문장은 반드시 <span> 하나로 감싼다 — 안 감싸면 ruby 와 가나 조각이
 // 그리드 칸을 하나씩 차지해 글자가 세로로 한 줄씩 쪼개진다(2026-10-01 실제로 그렇게 보였다).
 const evPair = (cls, mark, html) => `<p class="${cls}"><b>${mark}</b><span>${html}</span></p>`;
-// 고칠 표현 상자도 맨 위에 한국어(무슨 말을 하려던 건지) — 유저: 대사에 한국어가 없다(2026-10-02)
-const evShort = (sec, it) => sec === 'fix'
-  ? (it.kr ? `<p class="ev-kr">${esc(it.kr)}</p>` : '') + (([x, o]) => evPair('ev-x', LV[fixLv(it)][0], x) + evPair('ev-o', '✓', o))(diffPair(it.said, it.natural))
-  : sec === 'stuck'
-    ? `<p class="ev-want">하려던 말 · ${esc(it.wanted || '')}</p>` + evPair('ev-o', '✓', ruby(it.natural_full || ''))
-    : evPair('ev-o', '👂', ruby(it.jp_full || '')) + `<p class="ev-want">${esc(it.kr || '')}</p>`;
+// ---- 예문 상자: 모든 화면이 이 하나로 그린다 ----
+// 2026-10-02 유저: 한 곳만 고치면 다른 화면은 어긋난다(한국어 줄 누락·밑줄 방식 차이·✗/❌ 섞임).
+// 공통(여기서만 정한다): 순서 [머리] → 한국어 → 틀린 말(❌/🔸) → 고친 말(✓) → 핵심 → 덧붙임 → 자세히.
+// 화면마다 다른 것(제목·꼬리표·★·자세히·맞게 쓴 말 표시)은 옵션으로 켠다.
+//   o = { t, at, lv, lvTag, kr, krLabel, wrong, right, rightMark, core:[a,b], body, after, tools, more, static, hideId }
+function exBox(o) {
+  const lv = o.lv ? LV[o.lv] : null;
+  const nope = o.hideId ? `<button class="nope" data-hide="${esc(o.hideId)}" title="이 예문은 이 규칙과 맞지 않는다 — 빼고 판정을 다시 계산">이건 아니야</button>` : '';
+  const head = `<div class="ev-head"><span class="ev-lbl">${o.at ? `${shortDate(o.at)} · ` : ''}${esc(o.t || '')}</span>`
+    + `${o.lvTag && lv ? `<span class="lv lv-${o.lv}">${lv[0]} ${lv[1]}</span>` : ''}${o.more != null ? '<span class="ev-arr">자세히 ▸</span>' : ''}${nope}${o.tools || ''}</div>`;
+  const kr = o.kr ? `<p class="ev-kr">${o.krLabel ? `<b>${esc(o.krLabel)}</b> ` : ''}${esc(o.kr)}</p>` : '';
+  const wrong = o.wrong != null ? evPair('ev-x', lv ? lv[0] : '✗', o.wrong) : '';
+  const right = o.right != null ? evPair('ev-o', o.rightMark || '✓', o.right) : '';
+  const core = o.core ? (([x, y]) => `<p class="ev-core"><b>핵심</b><span class="jp">${x}</span> → <span class="jp">${y}</span></p>`)(diffPair(o.core[0], o.core[1])) : '';
+  const more = o.more != null ? `<div class="ev-more">${o.more || '<p class="mh">더 볼 설명이 없다.</p>'}</div>` : '';
+  return `<div class="ev${o.static ? ' ev-static' : ''}">${head}${kr}${o.body || ''}${wrong}${right}${core}${o.after || ''}${more}</div>`;
+}
+// 틀린 예문(데이터) → 틀린/고친 줄. 노트 카드에서 온 것(parts 있음)은 판정 조각으로 밑줄 + 핵심 한 줄,
+// 최소 수정(fixed)만 있는 판정 예문은 글자 비교. natural_full 은 다시 쓴 문장이라 글자 비교 금지(集めてみようか 사건).
+function exNgParts(e) {
+  if (e.parts) return { wrong: partsMarked(e.jp, e.parts), right: ruby(e.fixed || ''), core: e.core || null };
+  if (e.fixed) { const [x, y] = diffPair(e.jp, e.fixed); return { wrong: x, right: y }; }
+  return { wrong: ruby(e.jp || '') };
+}
+// 노트 카드 한 장 → 상자 옵션 (필수 칸 상자)
+const cardBox = (sec, it) => sec === 'fix'
+  ? (([x, y]) => ({ kr: it.kr, lv: fixLv(it), wrong: x, right: y }))(diffPair(it.said, it.natural))
+  : sec === 'stuck' ? { kr: it.wanted, krLabel: '하려던 말', right: ruby(it.natural_full || '') }
+  : { kr: it.kr, right: ruby(it.jp_full || ''), rightMark: '👂' };
 const evMore = (sec, it) => {
   const rows = [];
   if (sec === 'fix') {
@@ -2754,31 +2815,6 @@ const CARRY_V = {
   again: ['🔴', '또 틀림', '또 나왔다'],
   none: ['⚪', '기회 없음', '쓸 일이 없었다'],
 };
-const carryExHtml = (mark, cls, list) => (list || []).map(x =>
-  `<p class="ci-ex ${cls}"><b>${mark}</b><span class="jp">${esc(x.jp)}</span><em>${esc(x.t || '')}</em></p>`).join('');
-const carryHtml = c => {
-  const k = c.carry, items = (k && k.items) || [];
-  if (!items.length) return '';
-  const n = v => items.filter(x => x.v === v).length;
-  const fromTxt = k.from ? k.from.slice(5).replace('-', '/') : '지난 통화';
-  return `
-      <div class="carry">
-        <p class="carry-h">지난 통화 필수, 이번엔? <small>${esc(fromTxt)} 통화까지의 필수 ${items.length}개</small></p>
-        <div class="carry-sum">${['grad', 'again', 'none'].map(v => `<span class="cs-${v}">${CARRY_V[v][0]} ${CARRY_V[v][1]} <b>${n(v)}</b></span>`).join('')}</div>
-        ${items.map(x => `
-        <div class="ci ci-${x.v}">
-          <div class="ci-line"><span class="ci-ic">${x.v === 'again' ? '🔴'.repeat(Math.min((x.streak || 1) + 1, 3)) : CARRY_V[x.v][0]}</span>
-            <span class="ci-rule jp">${ruby(x.rule)}</span>
-            <span class="ci-cnt">${x.v === 'none' ? '보류' : `맞게 ${x.ok || 0} · 틀림 ${x.ng || 0}`}${x.v === 'again' ? ` · ${(x.streak || 1) + 1}통화 연속` : ''}</span></div>
-          <div class="ci-more">
-            ${x.note ? `<p class="ci-note">${esc(x.note)}</p>` : ''}
-            ${carryExHtml('✓', 'ok', x.ok_ex)}${carryExHtml('✗', 'ng', x.ng_ex)}
-            ${x.try ? `<p class="ci-try"><b>다음 통화에서 써보기</b><span class="jp">${ruby(x.try)}</span></p>` : ''}
-            ${x.v === 'again' && x.must_idx != null ? '<p class="ci-note">→ 이번 필수에도 들어 있다(맨 위).</p>' : ''}
-          </div>
-        </div>`).join('')}
-      </div>`;
-};
 // 또 틀린 규칙이 이번 필수에도 있으면 그 규칙을 맨 위로, 연속 배지를 붙인다. 데이터 순번(=✓ id)은 그대로 둔다.
 const mustOrder = c => {
   const streak = {};
@@ -2791,11 +2827,11 @@ const MUST_ORDER = ['fix', 'stuck', 'missed'];
 const mustRule = (c, m, i, { open = false, pos = i, streak = 0 } = {}) => {
   // 같은 종류끼리 붙이고(고칠 표현 → 막힌 순간 → 못 알아들음), 종류 이름은 무리 위에 한 번만 쓴다.
   // 상자를 한 겹 더 두르면 4겹이 돼 다시 무거워지니 소제목만 둔다. 같은 종류 안에서는 통화 시각 순.
-  const items = m.refs.map(ref => refItem(c, ref)).filter(([, it]) => it)
+  const items = effRefs(c, i).map(ref => refItem(c, ref)).filter(([, it]) => it)
     .sort(([a, x], [b, y]) => MUST_ORDER.indexOf(a) - MUST_ORDER.indexOf(b) || byT(x, y));
   const typeN = sec => items.filter(([s]) => s === sec).length;
   return `
-    <div class="rule${isDone('callsItem', mustRuleId(c, i)) ? ' done' : ''}${open ? ' open' : ''}" data-rule-id="${esc(mustRuleId(c, i))}" data-refs="${esc(m.refs.join(','))}">
+    <div class="rule${isDone('callsItem', mustRuleId(c, i)) ? ' done' : ''}${open ? ' open' : ''}" data-rule-id="${esc(mustRuleId(c, i))}" data-refs="${esc(effRefs(c, i).join(','))}">
       <div class="rule-top"><span class="rno">${pos + 1}</span>
         <div class="rule-main"><p class="rule-t jp">${ruby(m.rule)}</p>
           <div class="badges">${streak ? `<span class="bd hot">${'🔴'.repeat(Math.min(streak + 1, 3))} ${streak + 1}통화 연속</span>` : ''}${(m.badges || []).map(b => `<span class="bd">${esc(badgeText(b))}</span>`).join('')}</div>
@@ -2806,11 +2842,9 @@ const mustRule = (c, m, i, { open = false, pos = i, streak = 0 } = {}) => {
         <div class="ev-group"><p class="ev-group-h">내가 실제로 한 말 · ${items.length}</p>
         ${items.map(([sec, it], k) => `
         ${k === 0 || items[k - 1][0] !== sec ? `<p class="ev-type">${MUST_LABEL[sec]} ${typeN(sec)}</p>` : ''}
-        <div class="ev">
-          <div class="ev-head"><span class="ev-lbl">${esc(it.t || '')}</span><span class="ev-arr">자세히 ▸</span>${starBtn(callItemId(c, sec, it))}</div>
-          ${evShort(sec, it)}
-          <div class="ev-more">${evMore(sec, it) || '<p class="mh">더 볼 설명이 없다.</p>'}</div>
-        </div>`).join('')}
+        ${exBox({ t: it.t, ...cardBox(sec, it), more: evMore(sec, it), tools: starBtn(callItemId(c, sec, it)),
+          hideId: hideRefId(c, i, `${sec}:${callArr(c, sec).indexOf(it)}`) })}`).join('')}
+        ${hiddenNote(c.must[i] ? hiddenRefs(c, i) : [])}
         ${m.more ? `<p class="rule-more">＋ ${esc(m.more)}</p>` : ''}</div>
       </div>
     </div>`;
@@ -3389,6 +3423,53 @@ function hms(d) {
 
 let booted = false;
 
+// ---- 배포 전 자동 점검 (#selfcheck) ----
+// deploy.sh 가 헤드리스 크롬으로 이 주소를 열고, 결과에 SELFCHECK-FAIL 이 있으면 배포를 멈춘다.
+// 2026-10-02 유저: 같은 실수가 반복된다 → 「모든 예문 상자에 한국어」 같은 화면 규칙을 사람 눈이 아니라 검사로 지킨다.
+// 이 검사는 빈 브라우저(테스트용 프로필)에서 돈다 — 실제 체크 기록을 건드리지 않는다.
+function runSelfCheck() {
+  const out = [], fail = (where, msg) => out.push(`FAIL ${where}: ${msg}`);
+  const step = (where, fn) => { try { fn(); } catch (e) { fail(where, '오류 ' + (e && e.message)); } };
+  // 모든 화면 공통 규칙
+  const common = where => {
+    const txt = app.innerText;
+    if (/\bundefined\b|\bnull\b|NaN/.test(txt)) fail(where, '화면에 undefined/null/NaN 이 보인다');
+    if (/\{[^{}|]+\|[^{}]+\}/.test(txt)) fail(where, '후리가나 표기 {漢字|よみ} 가 그대로 보인다');
+    app.querySelectorAll('.ev').forEach((ev, k) => {
+      const lbl = `${where} 예문 ${k + 1}(${(ev.querySelector('.ev-lbl') || {}).textContent || ''})`;
+      if (!ev.querySelector('.ev-kr')) fail(lbl, '한국어 줄이 없다');
+      if (ev.querySelector('.ev-x') && !ev.querySelector('.ev-o')) fail(lbl, '틀린 말만 있고 고친 말이 없다');
+      ev.querySelectorAll('.ev-x > span, .ev-o > span').forEach(sp => { if (!sp.textContent.trim()) fail(lbl, '빈 문장 줄'); });
+    });
+  };
+  if (!CALLS) { out.push('SKIP 회화 노트가 잠겨 있다'); }
+  else {
+    step('목록', () => {
+      renderCallsList(); common('목록');
+      if (app.querySelectorAll('.calls-main .item').length !== CALLS.filter(c => !localStorage.getItem('callsPartner') || c.partner === localStorage.getItem('callsPartner')).length) fail('목록', '통화 카드 수가 다르다');
+      if (!app.querySelector('.fx-entry')) fail('목록', '「지금 고칠 것」 입구가 없다');
+    });
+    for (const c of CALLS) step(`노트 ${c.id}`, () => {
+      renderCallDetail(c); common(`노트 ${c.id}`);
+      if (c.must && app.querySelectorAll('.rule').length !== c.must.length) fail(`노트 ${c.id}`, `필수 규칙 ${c.must.length}개인데 ${app.querySelectorAll('.rule').length}개만 보인다`);
+      (c.must || []).forEach((m, i) => effRefs(c, i).forEach(r => { if (!refItem(c, r)[1]) fail(`노트 ${c.id}`, `필수 ${i + 1}의 증거 ${r} 가 없다`); }));
+    });
+    step('지금 고칠 것', () => {
+      renderFixStudy(); common('지금 고칠 것');
+      const fq = fixQueue(), left = fq.q.filter(it => !isDone('callsItem', it.id)).length;
+      const n = app.querySelectorAll('.fq-item').length;
+      if (n !== Math.min(FIX_N, left) && !(n === FIX_N)) fail('지금 고칠 것', `묶음이 ${n}개다(기대 ${Math.min(FIX_N, left)})`);
+      if (!app.querySelector('.mark-legend')) fail('지금 고칠 것', '밑줄 범례가 없다');
+      // 모든 버릇 카드를 펼쳐서 예문까지 검사
+      app.querySelectorAll('.rule').forEach(r => r.classList.add('open'));
+      common('지금 고칠 것(펼침)');
+    });
+  }
+  step('모아보기', () => { renderHard(); common('모아보기'); });
+  const ok = !out.some(l => l.startsWith('FAIL'));
+  app.innerHTML = `<pre id="selfcheck-out">${ok ? 'SELFCHECK-PASS' : 'SELFCHECK-FAIL'}\n${esc(out.join('\n'))}</pre>`;
+  document.title = ok ? 'SELFCHECK-PASS' : 'SELFCHECK-FAIL';
+}
 function route() {
   const h = location.hash.slice(1);
   seqStop();                       // 코너를 옮기면 재생 중인 음성은 끊는다
@@ -3424,6 +3505,7 @@ function route() {
     return;
   }
 
+  if (h === 'selfcheck') { runSelfCheck(); return; }
   if (h === 'vocab') { setCorner('vocab'); renderVocab(); scrollTo(0, 0); return; }
   if (h === 'hard') { setCorner('hard'); renderHard(); scrollTo(0, 0); return; }
 
