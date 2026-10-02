@@ -2725,8 +2725,9 @@ const fixLv = it => it.parts && it.parts.length && !it.parts.some(p => p.v === '
 // ✗/✓ 표시와 문장을 두 칸으로 나눈다. 문장은 반드시 <span> 하나로 감싼다 — 안 감싸면 ruby 와 가나 조각이
 // 그리드 칸을 하나씩 차지해 글자가 세로로 한 줄씩 쪼개진다(2026-10-01 실제로 그렇게 보였다).
 const evPair = (cls, mark, html) => `<p class="${cls}"><b>${mark}</b><span>${html}</span></p>`;
+// 고칠 표현 상자도 맨 위에 한국어(무슨 말을 하려던 건지) — 유저: 대사에 한국어가 없다(2026-10-02)
 const evShort = (sec, it) => sec === 'fix'
-  ? (([x, o]) => evPair('ev-x', LV[fixLv(it)][0], x) + evPair('ev-o', '✓', o))(diffPair(it.said, it.natural))
+  ? (it.kr ? `<p class="ev-kr">${esc(it.kr)}</p>` : '') + (([x, o]) => evPair('ev-x', LV[fixLv(it)][0], x) + evPair('ev-o', '✓', o))(diffPair(it.said, it.natural))
   : sec === 'stuck'
     ? `<p class="ev-want">하려던 말 · ${esc(it.wanted || '')}</p>` + evPair('ev-o', '✓', ruby(it.natural_full || ''))
     : evPair('ev-o', '👂', ruby(it.jp_full || '')) + `<p class="ev-want">${esc(it.kr || '')}</p>`;
