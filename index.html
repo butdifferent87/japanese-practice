@@ -2252,13 +2252,23 @@ function fixBoard() {
       why: (m || originOf(x.rule) || {}).why || '', note: x.note || '',
       ngEx: x.ng_ex || [], okEx: x.ok_ex || [], try: x.try || '', links });
   }
+  // 노트 카드(고칠 표현·막힌 순간)를 ✗/✓ 예문 형식으로. 막힌 순간은 실제로 한 말 → 이렇게 말하면 됨
+  const cardEx = (c, refs, n = 2) => refs.map(r => [c, ...refItem(c, r)]).filter(([, sec, it]) => it && (sec === 'fix' || sec === 'stuck')).slice(0, n)
+    .map(([cc, sec, it]) => ({ jp: it.said_full || it.said || '', fixed: it.natural_full || it.natural || '', kr: it.kr || it.wanted || '', t: it.t, lv: fixLv(it),
+      parts: it.parts, core: sec === 'fix' && it.said && it.natural ? [it.said, it.natural] : null, at: cc.date }));
+  // 이번 통화에 예문이 없는 규칙(⚪ 쓸 기회 없음 등)은 그 규칙이 처음 필수가 된 통화의 카드를 보여준다 — 유저: 틀린 문장이 안 보인다
+  for (const x of all) {
+    if (x.ngEx.length) continue;
+    for (const l of x.links) {
+      const [cid, i] = l.split(':'), c = CALLS.find(z => z.id === cid), m = c && c.must && c.must[+i];
+      if (m) { x.ngEx = cardEx(c, m.refs); x.firstEx = true; if (x.ngEx.length) break; }
+    }
+  }
   latest.must.forEach((m, i) => {
     if (used.has(i)) return;
     const n = +((m.badges || []).join(' ').match(/(\d+)회/) || [])[1] || m.refs.length;
     const ev = m.refs.map(r => refItem(latest, r)).filter(([, it]) => it);
-    const ngEx = ev.filter(([sec]) => sec === 'fix').slice(0, 2)
-      .map(([, it]) => ({ jp: it.said_full || it.said, fixed: it.natural_full || it.natural, kr: it.kr || '', t: it.t, lv: fixLv(it),
-        parts: it.parts, core: it.said && it.natural ? [it.said, it.natural] : null }));
+    const ngEx = cardEx(latest, m.refs);
     // 무게용 심각도: 고칠 표현·막힌 순간은 조각 판정으로, 못 알아들은 순간은 틀림으로 본다
     const lvs = ev.map(([sec, it]) => sec === 'missed' ? 'bad' : fixLv(it));
     all.push({ rule: m.rule, kind: 'new', run: 1, ng: n, why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`], lvs });
@@ -2371,9 +2381,9 @@ function renderFixStudy(skip = false) {
   const batch = fixBatch(fq, skip);
   // ✗ 틀린 말 아래 줄에 ✓ 고친 말 — 오른쪽 화살표로 붙이면 눈이 옆으로 가서 읽기 어렵다(유저)
   const exLines = x => [
-    ...(x.ngEx.length ? [`<p class="ev-type">고칠 말 ${x.ngEx.length}${['bad', 'meh'].map(l => { const n = x.ngEx.filter(e => (e.lv || 'bad') === l).length; return n ? ` · ${LV[l][0]} ${LV[l][1]} ${n}` : ''; }).join('')}</p>`] : []),
+    ...(x.ngEx.length ? [`<p class="ev-type">${x.firstEx ? '처음 틀렸던 말' : '고칠 말'} ${x.ngEx.length}${['bad', 'meh'].map(l => { const n = x.ngEx.filter(e => (e.lv || 'bad') === l).length; return n ? ` · ${LV[l][0]} ${LV[l][1]} ${n}` : ''; }).join('')}</p>`] : []),
     // 맨 위에 「무슨 말을 하려던 건지」(한국어) — 일본어만으론 맥락을 모른다(유저)
-    ...x.ngEx.map(e => { const lv = LV[e.lv || 'bad']; return `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${esc(e.t || '')}</span><span class="lv lv-${e.lv || 'bad'}">${lv[0]} ${lv[1]}</span></div>
+    ...x.ngEx.map(e => { const lv = LV[e.lv || 'bad']; return `<div class="ev ev-static"><div class="ev-head"><span class="ev-lbl">${e.at && x.firstEx ? `${shortDate(e.at)} · ` : ''}${esc(e.t || '')}</span><span class="lv lv-${e.lv || 'bad'}">${lv[0]} ${lv[1]}</span></div>
       ${e.kr ? `<p class="ev-kr">${esc(e.kr)}</p>` : ''}${e.parts
         // 노트 카드에서 온 예문: 판정 조각으로 밑줄, 고친 문장은 그대로, 아래에 핵심 고침만 글자 비교
         ? evPair('ev-x', lv[0], partsMarked(e.jp, e.parts)) + evPair('ev-o', '✓', ruby(e.fixed || ''))
