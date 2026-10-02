@@ -281,6 +281,8 @@
   .ev-head .ev-arr + .nope { margin-left: 8px; }
   .ev-kr b { font-size: 11px; color: var(--muted); }
   .hid-all { font-size: 12px; color: var(--muted); margin: 14px 2px; padding-top: 10px; border-top: 1px dashed var(--stroke); }
+  .hid-all small { display: block; margin-top: 4px; }
+  .hid-all .hid-copy { font-size: 11.5px; padding: 2px 9px; margin-left: 4px; }
   .hid-all .unhide { font-size: 11.5px; padding: 2px 9px; margin-left: 6px; }
   .hid-note { font-size: 12px; color: var(--muted); margin: 4px 2px 8px; }
   .hid-note .unhide { font-size: 11.5px; padding: 2px 9px; margin-left: 6px; }
@@ -2443,7 +2445,8 @@ function renderFixStudy(skip = false) {
       ${batch.length ? `<button class="fq-skip">${bDone() === batch.length ? `다음 ${FIX_N}개 열기` : `다 안 끝났지만 다음 ${FIX_N}개 보기 (남은 건 다음 바퀴에)`}</button>` : ''}
       ${fold('🎓 졸업', fq.grad, fq.grad.map(x => `
         <p class="fb-sub"><span class="jp">${ruby(x.rule)}</span><span class="fb-try">${shortDate(x.at)} 통화에서 맞게 씀${x.ok_ex && x.ok_ex[0] ? ` · <span class="jp">${ruby(x.ok_ex[0].jp)}</span>` : ''}${(x.hidden || []).length ? ' · 예문을 빼서 졸업' : ''}</span>${hiddenNote(x.hidden || [])}</p>`).join(''))}
-      ${(ids => ids.length ? `<p class="hid-all">이 화면에서 뺀 예문 전체 ${ids.length}개 <button class="unhide" data-unhide="${esc(ids.join(','))}">전부 되돌리기</button></p>` : '')(
+      ${(ids => ids.length ? `<p class="hid-all">이 화면에서 뺀 예문 전체 ${ids.length}개 <button class="unhide" data-unhide="${esc(ids.join(','))}">전부 되돌리기</button>
+        <button class="hid-copy">다음 판정에 넘기기(복사)</button><small>다음 통화 노트를 만들 때 이 목록을 붙여 넣으면 같은 예문을 다시 넣지 않는다</small></p>` : '')(
         Object.keys(doneOf('callsItem')).filter(k => k.startsWith('hide:') && isDone('callsItem', k)))}
     </div>`;
   app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
@@ -2491,6 +2494,11 @@ function renderFixStudy(skip = false) {
   app.querySelectorAll('.fq-item').forEach(el => {
     const c = CALLS.find(x => x.id === el.dataset.callId);
     if (c) wireCallClips(c, el);
+  });
+  app.querySelector('.hid-copy')?.addEventListener('click', async () => {
+    const txt = hiddenReport();
+    try { await navigator.clipboard.writeText(txt); toast('복사했다 — 다음 노트 만들 때 붙여 넣기'); }
+    catch { prompt('아래 글을 복사해서 다음 노트 만들 때 붙여 넣기', txt); }
   });
   app.querySelectorAll('.fq-skip, .fq-next').forEach(b => b.addEventListener('click', () => { renderFixStudy(true); scrollTo(0, 0); }));
   app.querySelector('.fixstudy').addEventListener('click', e => {
@@ -2672,6 +2680,24 @@ function effCarry(c) {
       ng_ex: (x.ng_ex || []).filter(e => !ngH.includes(e)), ok_ex: (x.ok_ex || []).filter(e => !okH.includes(e)),
       hidden: [...ngH.map(e => carryHideId(c, x, 'ng', e)), ...okH.map(e => carryHideId(c, x, 'ok', e))] };
   });
+}
+function hiddenReport() {
+  const plain = t => (t || '').replace(/\{([^|{}]+)\|[^|{}]+\}/g, '$1');
+  const lines = [];
+  for (const id of Object.keys(doneOf('callsItem')).filter(k => k.startsWith('hide:') && isDone('callsItem', k))) {
+    const [, cid, kind, ...rest] = id.split(':'), c = (CALLS || []).find(x => x.id === cid);
+    if (!c) continue;
+    if (kind === 'must') {
+      const i = +rest[0], ref = rest.slice(1).join(':'), m = (c.must || [])[i], [, it] = refItem(c, ref);
+      lines.push(`- ${cid} 필수 「${m ? m.rule : i}」 에서 뺌 · ${ref} ${it ? `「${plain(it.said || it.said_full || it.wanted || it.jp_full)}」` : ''}`);
+    } else {
+      const [key, ngok, ...t] = rest, time = t.join(':');
+      const x = ((c.carry && c.carry.items) || []).find(z => ruleKey(z.rule) === key);
+      const e = x && (x[ngok === 'ng' ? 'ng_ex' : 'ok_ex'] || []).find(z => (z.t || '') === time);
+      lines.push(`- ${cid} 판정 「${x ? x.rule : key}」 · ${ngok === 'ng' ? '틀린 말' : '맞게 쓴 말'} ${time} ${e ? `「${plain(e.jp)}」` : ''}`);
+    }
+  }
+  return lines.length ? `[회화 노트 — 내가 「이건 아니야」로 뺀 예문 ${lines.length}개. 다음 판정 때 참고]\n${lines.join('\n')}` : '';
 }
 const hiddenNote = ids => ids.length ? `<p class="hid-note">뺀 예문 ${ids.length}개 <button class="unhide" data-unhide="${esc(ids.join(','))}">되돌리기</button></p>` : '';
 // 누르면 그 자리에서 다시 그린다(판정·순위가 바뀌므로). 스크롤 위치는 지킨다.
