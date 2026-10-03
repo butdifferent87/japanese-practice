@@ -388,6 +388,8 @@
   .star-chips { margin-bottom: 14px; }
   /* 학습 화면 */
   .fixstudy .rule.fx { margin-top: 10px; }
+  .rule.fx3 .rule-t { font-size: 15.5px; }
+  body:not(.no-furi) .rule.fx3 .rule-t { line-height: 2; }
   .fx-note { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
   .fx-ex .ci-ex + .ci-ex { margin-top: 6px; }
   .fx-ex strong { color: var(--text); }
@@ -2423,8 +2425,39 @@ function renderFixStudy(skip = false) {
   const item = (it, k) => `
     <div class="fq-item" data-call-id="${esc(it.c ? it.c.id : '')}">
       <p class="fq-tag t${it.tier}">${esc(qTag(it))}${it.c ? ` <button class="fq-open" data-go-call="${esc(it.c.id)}">노트 →</button>` : ''}</p>
-      ${it.tier === 1 ? habit(it.x, k) : it.tier === 2 ? mustRule(it.c, it.m, it.i, { pos: k }) : CARD[it.sec](it.c, it.it)}
+      ${it.tier === 1 ? habit(it.x, k) : it.tier === 2 ? mustRule(it.c, it.m, it.i, { pos: k }) : detailCard(it, k)}
     </div>`;
+  // 3단 세부 카드: 원래 노트 카드는 칸 안에서 보던 거라 제목이 없고 한국어가 맨 아래였다(유저: 뭐가 포인트인지 모른다).
+  // 버릇·필수 카드와 같은 모양으로 — 제목 = 포인트(고친 곳 / 필요했던 표현 / 들렸어야 할 말), 본문은 예문 상자.
+  const keyTitle = ks => (ks || []).map(x => `「${ruby(x.jp)}」`).join(' ');
+  const detailCard = (it, k) => {
+    const { c, sec, it: d, id } = it;
+    const title = sec === 'fix' ? (([x, y]) => `${x} → ${y}`)(diffPair(d.said, d.natural))
+      : sec === 'stuck' ? (keyTitle(d.key) || ruby(d.natural_full || '')) : (keyTitle(d.key) || '못 알아들은 말');
+    const badges = [sec === 'fix' && d.cat ? `<span class="bd g">${esc(d.cat)}</span>` : '',
+      sec === 'stuck' && d.signal ? `<span class="bd g">${esc(d.signal)}</span>` : '',
+      sec === 'missed' && d.cause ? `<span class="bd g">${esc(d.cause)}</span>` : '',
+      (d.repeat_ts || []).length ? `<span class="bd">이번 통화 ${(d.repeat_ts || []).length + 1}번</span>` : ''].join('');
+    const box = sec === 'fix'
+      ? exBox({ static: true, t: d.t, kr: d.kr, lv: fixLv(d), lvTag: true, wrong: d.parts && d.parts.length ? partsMarked(d.said_full || d.said, d.parts) : ruby(d.said_full || d.said || ''), right: ruby(d.natural_full || d.natural || '') })
+      : sec === 'stuck'
+        ? exBox({ static: true, t: d.t, kr: d.wanted, krLabel: '하려던 말', lv: fixLv(d), lvTag: true, wrong: d.parts && d.parts.length ? partsMarked(d.said_full || '', d.parts) : ruby(d.said_full || ''), right: ruby(d.natural_full || '') })
+        : exBox({ static: true, t: d.t, kr: d.kr, right: `<span${d.clipKey ? ` data-clip="${esc(d.clipKey)}"` : ''}>${ruby(d.jp_full || '')}</span>`, rightMark: '👂',
+            tools: d.clipKey ? `<button class="clip-btn" data-clip="${esc(d.clipKey)}" disabled>▶ 듣기</button>` : '' });
+    const why = sec === 'fix' ? d.why : sec === 'missed' ? d.how : '';
+    return `
+    <div class="rule fx3${isDone('callsItem', id) ? ' done' : ''}" data-card-id="${esc(id)}">
+      <div class="rule-top"><span class="rno">${k + 1}</span>
+        <div class="rule-main"><p class="rule-t jp">${title}</p>
+          <div class="badges">${badges}</div>
+          <div class="rule-toggle"><span class="arr">▸</span><span class="t-open">자세히 보기</span><span class="t-close">접기</span></div></div>
+        <span class="rule-tools">${starBtn(id)}${checkBtn('callsItem', id)}</span></div>
+      <div class="rule-body">
+        ${why ? `<p class="rule-why">${esc(why)}</p>` : ''}
+        <div class="ev-group">${box}${sec !== 'fix' && (d.key || []).length ? keysHtml(d.key) : ''}</div>
+      </div>
+    </div>`;
+  };
   const fold = (title, list, body) => list.length ? `
     <div class="fb-fold"><p class="fb-fold-h">${title} <b>${list.length}</b><span class="arr">▸</span></p><div class="fb-fold-b">${body}</div></div>` : '';
   const bDone = () => batch.filter(it => isDone('callsItem', it.id)).length;
@@ -2454,7 +2487,7 @@ function renderFixStudy(skip = false) {
     app.querySelector('.fx-cnt').textContent = `이번 묶음 ${bDone()} / ${batch.length}`;
     app.querySelector('.must-prog i').style.width = (batch.length ? bDone() / batch.length * 100 : 0) + '%';
     app.querySelector('.fq-alln').textContent = qDoneN(fq);
-    app.querySelectorAll('.rule').forEach(r => r.dataset.ruleId && r.classList.toggle('done', isDone('callsItem', r.dataset.ruleId)));
+    app.querySelectorAll('.rule').forEach(r => { const id = r.dataset.ruleId || r.dataset.cardId; if (id) r.classList.toggle('done', isDone('callsItem', id)); });
     syncChecks(app);
     // 다 끝나도 자동으로 넘어가지 않는다 — 축하 칸을 보여주고 버튼을 기다린다
     const all = batch.length && bDone() === batch.length;
@@ -3497,6 +3530,15 @@ function runSelfCheck() {
       // 모든 버릇 카드를 펼쳐서 예문까지 검사
       app.querySelectorAll('.rule').forEach(r => r.classList.add('open'));
       common('지금 고칠 것(펼침)');
+      // 대기열 전체를 10개씩 넘기며 검사 — 뒤쪽 묶음(통화 세부 카드)도 같은 규칙을 지키는지
+      for (let k = 0; k < fq.q.length; k += FIX_N) {
+        localStorage.setItem(BATCH_KEY, JSON.stringify({ base: fq.latest.id, ids: fq.q.slice(k, k + FIX_N).map(it => it.id), cursor: k + FIX_N }));
+        renderFixStudy();
+        app.querySelectorAll('.rule').forEach(r => r.classList.add('open'));
+        common(`지금 고칠 것 ${k + 1}~${Math.min(k + FIX_N, fq.q.length)}번째`);
+        app.querySelectorAll('.rule.fx3').forEach(r => { if (!r.querySelector('.rule-t').textContent.trim()) fail(`지금 고칠 것 ${k + 1}~`, '세부 카드에 제목(포인트)이 없다'); });
+      }
+      localStorage.removeItem(BATCH_KEY);
     });
   }
   step('모아보기', () => { renderHard(); common('모아보기'); });
