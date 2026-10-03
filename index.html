@@ -2818,15 +2818,19 @@ function exNgParts(e) {
   return { wrong: ruby(e.jp || '') };
 }
 // 노트 카드 한 장 → 상자 옵션 (필수 칸 상자)
+// 고칠 표현은 문장 전체를 보여준다 — 한국어 줄(kr)이 문장 전체의 뜻이라 일본어도 전체여야 짝이 맞는다(유저 2026-10-03).
+// 틀린 줄은 판정 조각(parts)으로 밑줄, 고친 줄은 그대로, 정확히 고친 곳은 「핵심」 한 줄(said→natural 글자 비교).
 const cardBox = (sec, it) => sec === 'fix'
-  ? (([x, y]) => ({ kr: it.kr, lv: fixLv(it), wrong: x, right: y }))(diffPair(it.said, it.natural))
+  ? (it.said_full && it.natural_full
+    ? { kr: it.kr, lv: fixLv(it), wrong: it.parts && it.parts.length ? partsMarked(it.said_full, it.parts) : ruby(it.said_full),
+        right: ruby(it.natural_full), core: it.said && it.natural ? [it.said, it.natural] : null }
+    : (([x, y]) => ({ kr: it.kr, lv: fixLv(it), wrong: x, right: y }))(diffPair(it.said, it.natural)))
   : sec === 'stuck' ? { kr: it.wanted, krLabel: '하려던 말', right: ruby(it.natural_full || '') }
   : { kr: it.kr, right: ruby(it.jp_full || ''), rightMark: '👂' };
 const evMore = (sec, it) => {
   const rows = [];
   if (sec === 'fix') {
     if (it.why) rows.push(['왜 틀렸나', `<p>${esc(it.why)}</p>`]);
-    if (it.said_full && it.natural_full) rows.push(['문장 전체', `<p class="mx">${it.parts && it.parts.length ? partsMarked(it.said_full, it.parts) : ruby(it.said_full)}</p><p class="mo">${ruby(it.natural_full)}</p>`]);
   } else if (sec === 'stuck') {
     if (it.said_full) rows.push(['실제로 한 말', `<p class="mx">${ruby(it.said_full)}</p>`]);
     if (it.key && it.key.length) rows.push(['그때 필요했던 말', keysHtml(it.key)]);
