@@ -2317,7 +2317,6 @@ const fxBadge = x => (x.soft ? '<span class="bd soft">🔸 말투(어색함)</sp
 // 묶음 = 안 한 것 10개. 10개를 다 ✓하면 다음 10개, 「다음 10개 보기」로 건너뛸 수도 있다(남은 건 다음 바퀴에).
 // 새 통화가 들어오면(기준 통화가 바뀌면) 처음부터 다시. 2·3단 ✓는 노트의 체크와 같은 것이라 노트에도 남는다.
 // 묶음 구성은 이 기기에만 기억한다(체크 자체는 동기화된다).
-const BATCH_KEY = 'fixBatch.v1';
 const SEC_NAME = { fix: '고칠 표현', stuck: '막힌 순간', missed: '못 알아들은 순간' };
 function fixQueue() {
   const b = fixBoard();
@@ -2339,33 +2338,28 @@ function fixQueue() {
   }
   return { ...b, q };
 }
+// 묶음 = 대기열을 10개씩 자른 고정된 칸(1묶음=1~10번, 2묶음=11~20번…). 대기열 순서는 같은 데이터로 계산하니
+// 맥·폰이 같다 → 「지금 몇 번째 묶음인지」만 동기화하면 두 기기가 같은 10개를 본다.
+// 2026-10-04 유저: 맥과 폰의 탑10이 다르다 — 예전엔 묶음 구성을 기기마다 따로 저장해서 갈렸다.
+// 번호는 체크와 같은 저장소(callsItem)에 `fixpage:<기준통화>:<k>` 로 남기고 가장 큰 k 를 쓴다(늘기만 하니 병합이 안전하다).
+// 다 끝난 묶음은 🎉 로 머물고, 「다음 10개 열기」를 눌러야 다음 묶음으로 간다(자동으로 넘기면 벅차다 — 유저).
+const fixPagePrefix = fq => `fixpage:${fq.latest.id}:`;
+const fixPageCount = fq => Math.max(1, Math.ceil(fq.q.length / FIX_N));
+function fixPageK(fq) {
+  const pre = fixPagePrefix(fq);
+  let k = 0;
+  for (const id of Object.keys(doneOf('callsItem'))) if (id.startsWith(pre) && isDone('callsItem', id)) k = Math.max(k, +id.slice(pre.length) || 0);
+  return k;
+}
+const fixPageItems = (fq, k) => { const pg = k % fixPageCount(fq); return fq.q.slice(pg * FIX_N, pg * FIX_N + FIX_N); };
+// 다음 묶음: 안 한 게 하나라도 있는 다음 칸으로(끝까지 가면 처음으로 — 건너뛴 묶음은 다음 바퀴에)
+function fixAdvance(fq) {
+  const k = fixPageK(fq), n = fixPageCount(fq);
+  for (let s = 1; s <= n; s++) if (fixPageItems(fq, k + s).some(it => !isDone('callsItem', it.id))) { setDone('callsItem', fixPagePrefix(fq) + (k + s), true); return; }
+}
 function fixBatch(fq, skip = false) {
-  let st = null;
-  try { st = JSON.parse(localStorage.getItem(BATCH_KEY)); } catch {}
-  if (!st || st.base !== fq.latest.id) st = { base: fq.latest.id, ids: [], cursor: 0 };
-  const at = new Map(fq.q.map((it, k) => [it.id, k]));
-  let ids = (st.ids || []).filter(id => at.has(id));
-  // 다 끝난 묶음은 그대로 둔다(🎉 화면). 다음 10개는 사용자가 버튼을 눌러야 열린다 — 2026-10-02 유저:
-  // 끝나자마자 자동으로 10개가 또 차면 벅차다. 처음 열 때(ids 없음)와 버튼(skip)일 때만 새로 뽑는다.
-  if (skip || !ids.length) {
-    const n = fq.q.length, pick = [];
-    for (let step = 0; step < n && pick.length < FIX_N; step++) {
-      const k = (st.cursor + step) % n, it = fq.q[k];
-      if (!isDone('callsItem', it.id) && !(skip && ids.includes(it.id))) pick.push(k);
-    }
-    if (pick.length) { ids = pick.map(k => fq.q[k].id); st.cursor = (pick[pick.length - 1] + 1) % n; }
-    else ids = [];
-  } else if (ids.length < FIX_N && !ids.every(id => isDone('callsItem', id))) {
-    // 묶음 중간에 데이터가 바뀌어(규칙을 나누거나 졸업 처리) 저장된 항목이 사라지면 빈자리를 남기지 않는다.
-    // 대기열 맨 위(가장 급한 것)부터 안 한 것으로 채운다(2026-10-01: 10개가 8개로 줄어 보였다).
-    for (const it of fq.q) {
-      if (ids.length >= FIX_N) break;
-      if (!ids.includes(it.id) && !isDone('callsItem', it.id)) ids.push(it.id);
-    }
-  }
-  st.ids = ids;
-  try { localStorage.setItem(BATCH_KEY, JSON.stringify(st)); } catch {}
-  return ids.map(id => fq.q[at.get(id)]);
+  if (skip) fixAdvance(fq);
+  return fixPageItems(fq, fixPageK(fq));
 }
 const qLabel = it => it.tier === 1 ? it.x.rule : it.tier === 2 ? it.m.rule
   : it.sec === 'fix' ? it.it.said : it.sec === 'stuck' ? it.it.wanted : it.it.jp_full;
@@ -2388,10 +2382,10 @@ function fixEntryHtml() {
 }
 
 // 학습 화면 #calls/fix
-function renderFixStudy(skip = false) {
+function renderFixStudy(skip = false, pageOverride = null) {
   const fq = fixQueue();
   if (!fq) { location.hash = 'calls'; return; }
-  const batch = fixBatch(fq, skip);
+  const batch = pageOverride == null ? fixBatch(fq, skip) : fixPageItems(fq, pageOverride);
   // ✗ 틀린 말 아래 줄에 ✓ 고친 말 — 오른쪽 화살표로 붙이면 눈이 옆으로 가서 읽기 어렵다(유저)
   const exLines = x => [
     ...(x.ngEx.length ? [`<p class="ev-type">${x.firstEx ? '처음 틀렸던 말' : '고칠 말'} ${x.ngEx.length}${['bad', 'meh'].map(l => { const n = x.ngEx.filter(e => (e.lv || 'bad') === l).length; return n ? ` · ${LV[l][0]} ${LV[l][1]} ${n}` : ''; }).join('')}</p>`] : []),
@@ -2470,7 +2464,7 @@ function renderFixStudy(skip = false) {
         새 통화 노트가 들어오면 다시 버릇부터. 필수·세부 카드의 ✓는 그 통화 노트에도 똑같이 남는다.</p>
       <div class="must-prog"><span><i style="width:${batch.length ? bDone() / batch.length * 100 : 0}%"></i></span><em class="fx-cnt">이번 묶음 ${bDone()} / ${batch.length}</em></div>
       <p class="mark-legend"><span class="dx">빨간 물결</span> 틀림 · <span class="dz">주황 점선</span> 어색함 · <span class="dins"></span> 빠진 자리 · <span class="do">초록</span> 고친 곳·맞게 쓴 곳</p>
-      <p class="fq-all">전체 고칠 것 ${fq.q.length}개 중 <b class="fq-alln">${qDoneN(fq)}</b>개 확인</p>
+      <p class="fq-all">${fixPageK(fq) % fixPageCount(fq) + 1}번째 묶음 (전체 ${fixPageCount(fq)}묶음) · 전체 고칠 것 ${fq.q.length}개 중 <b class="fq-alln">${qDoneN(fq)}</b>개 확인 · 맥·폰 같은 묶음</p>
       <div class="fq-done" ${batch.length && bDone() === batch.length ? '' : 'hidden'}>
         <b>🎉 이번 ${batch.length}개 끝!</b><small>오늘은 여기까지 해도 충분해. 더 하고 싶으면 다음 ${FIX_N}개를 열어.</small>
         <button class="fq-next">다음 ${FIX_N}개 열기</button></div>
@@ -3532,13 +3526,11 @@ function runSelfCheck() {
       common('지금 고칠 것(펼침)');
       // 대기열 전체를 10개씩 넘기며 검사 — 뒤쪽 묶음(통화 세부 카드)도 같은 규칙을 지키는지
       for (let k = 0; k < fq.q.length; k += FIX_N) {
-        localStorage.setItem(BATCH_KEY, JSON.stringify({ base: fq.latest.id, ids: fq.q.slice(k, k + FIX_N).map(it => it.id), cursor: k + FIX_N }));
-        renderFixStudy();
+        renderFixStudy(false, k / FIX_N);
         app.querySelectorAll('.rule').forEach(r => r.classList.add('open'));
         common(`지금 고칠 것 ${k + 1}~${Math.min(k + FIX_N, fq.q.length)}번째`);
         app.querySelectorAll('.rule.fx3').forEach(r => { if (!r.querySelector('.rule-t').textContent.trim()) fail(`지금 고칠 것 ${k + 1}~`, '세부 카드에 제목(포인트)이 없다'); });
       }
-      localStorage.removeItem(BATCH_KEY);
     });
   }
   step('모아보기', () => { renderHard(); common('모아보기'); });
