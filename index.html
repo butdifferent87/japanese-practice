@@ -2407,7 +2407,7 @@ function renderFixStudy(skip = false, pageOverride = null) {
         <div class="rule-main"><p class="rule-t jp">${ruby(x.rule)}</p>
           <div class="badges">${fxBadge(x)}</div>
           <div class="rule-toggle"><span class="arr">▸</span><span class="t-open">자세히 보기</span><span class="t-close">접기</span></div></div>
-        <span class="rule-tools">${checkBtn('callsItem', x.id)}</span></div>
+        <span class="rule-tools">${(l => l ? starBtn(`${l.split(':')[0]}:must:${l.split(':')[1]}`) : '')([...x.links].sort().pop())}${checkBtn('callsItem', x.id)}</span></div>
       <div class="rule-body">
         ${x.why ? `<p class="rule-why">${esc(x.why)}</p>` : ''}
         ${x.note ? `<p class="fx-note">${esc(x.note)}</p>` : ''}
@@ -3530,6 +3530,11 @@ function runSelfCheck() {
         app.querySelectorAll('.rule').forEach(r => r.classList.add('open'));
         common(`지금 고칠 것 ${k + 1}~${Math.min(k + FIX_N, fq.q.length)}번째`);
         app.querySelectorAll('.rule.fx3').forEach(r => { if (!r.querySelector('.rule-t').textContent.trim()) fail(`지금 고칠 것 ${k + 1}~`, '세부 카드에 제목(포인트)이 없다'); });
+        app.querySelectorAll('.fq-item > .rule').forEach(r => {
+          const t = (r.querySelector('.rule-t') || {}).textContent || '';
+          if (!r.querySelector('.rule-tools .star')) fail(`지금 고칠 것 ${k + 1}~`, `카드에 ★가 없다 — ${t.slice(0, 20)}`);
+          if (!r.querySelector('.rule-tools .chk')) fail(`지금 고칠 것 ${k + 1}~`, `카드에 ✓가 없다 — ${t.slice(0, 20)}`);
+        });
       }
     });
   }
