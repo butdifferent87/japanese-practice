@@ -2284,6 +2284,7 @@ function renderCallsLock() {
 //       ✓하면 각 통화 노트의 같은 필수(links)와 그 증거 카드도 확인 처리한다(켤 때만 — 끌 때 노트 쪽 기록은 건드리지 않는다).
 const FIX_N = 10;
 const ruleKey = t => { let h = 0; for (const ch of t) h = (h * 31 + ch.codePointAt(0)) >>> 0; return h.toString(36); };
+const isBaseWord = m => ((m && m.badges) || []).includes('基礎単語');
 function fixBoard() {
   const latest = (CALLS || []).find(c => c.must && c.must.length);
   if (!latest) return null;
@@ -2297,7 +2298,7 @@ function fixBoard() {
     if (x.must_idx != null && !links.includes(`${latest.id}:${x.must_idx}`)) links.push(`${latest.id}:${x.must_idx}`);
     // relapse = 졸업했던 규칙을 다시 틀림. 한 번 고쳤다 돌아온 버릇이라 최소 2통화 연속 급으로 올린다(유저 확정).
     const bad = x.v === 'again' || x.v === 'relapse';
-    all.push({ rule: x.rule, kind: bad ? 'again' : 'none', relapse: x.v === 'relapse',
+    all.push({ rule: x.rule, kind: bad ? 'again' : 'none', relapse: x.v === 'relapse', base: isBaseWord(m || originOf(x.rule)),
       run: x.v === 'relapse' ? Math.max(2, (x.streak || 1) + 1) : x.v === 'again' ? (x.streak || 1) + 1 : 0, ng: x.ng || 0,
       why: (m || originOf(x.rule) || {}).why || '', note: x.note || '',
       ngEx: (x.ng_ex || []).map(e => ({ ...e, hideId: carryHideId(latest, x, 'ng', e) })),
@@ -2322,7 +2323,7 @@ function fixBoard() {
     const ngEx = cardEx(latest, i);
     // 무게용 심각도: 고칠 표현·막힌 순간은 조각 판정으로, 못 알아들은 순간은 틀림으로 본다
     const lvs = ev.map(([sec, it]) => sec === 'missed' ? 'bad' : fixLv(it));
-    all.push({ rule: m.rule, kind: 'new', run: 1, ng: Math.max(0, n - hiddenRefs(latest, i).length), why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`], lvs, hidden: hiddenRefs(latest, i) });
+    all.push({ rule: m.rule, kind: 'new', run: 1, base: isBaseWord(m), ng: Math.max(0, n - hiddenRefs(latest, i).length), why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`], lvs, hidden: hiddenRefs(latest, i) });
   });
   // 순위 점수(유저 확정 2026-10-01): 연속 통화 수 × 무게 + 마지막 통화 횟수 × 0.1(최대 0.5).
   //   무게 = 마지막 통화에 ❌ 틀림이 하나라도 있으면 1, 🔸 어색함뿐이면 0.5.
@@ -2374,6 +2375,25 @@ function fixQueue() {
     cards.sort((a, z) => a.o - z.o || z.w - a.w || byT(a.it, z.it));
     q.push(...cards);
   }
+  // 일본인 한국어 학습자 노트(target:"ko")는 칸 종류가 아니라 한 점수로 섞어 세운다(2026-10-06 유저:
+  // 「막힌 문장·자주 틀리는 것·몰랐던 필수 단어가 복합적으로 우선순위별로」). 후유 노트는 위 순서 그대로.
+  //   기본 = 몰랐던 기초 단어(基礎単語) 3 · 막힌 문장 2 · 틀림❌·못 알아들음 1.5 · 어색함🔸 1
+  //   가산 = 같은 실수 한 번 더마다 +0.5(최대 1.5) + 지난 통화부터 이어 틀린 연속 통화마다 +1
+  //   같은 점수면 기초 단어 > 막힌 문장 > 나머지, 그다음 원래 순서(정렬이 안정적이라 유지된다).
+  if (tgtLang(b.latest) === 'ko') {
+    const base = (sec, it) => sec === 'stuck' ? 2 : sec === 'missed' || fixLv(it) === 'bad' ? 1.5 : 1;
+    const rank = it => {
+      if (it.tier === 3) return { s: base(it.sec, it.it) + Math.min(1.5, 0.5 * (it.it.repeat_ts || []).length), k: it.sec === 'stuck' ? 1 : 0 };
+      const c = it.tier === 2 ? it.c : b.latest, i = it.tier === 2 ? it.i : (c.must || []).findIndex(m => m.rule === it.x.rule), m = (c.must || [])[i];
+      if (it.tier === 1 ? it.x.base : isBaseWord(m)) return { s: 3, k: 2 };
+      const ev = m ? effRefs(c, i).map(r => refItem(c, r)).filter(([, x]) => x) : [];
+      const n = it.tier === 1 ? it.x.ng : +((m.badges || []).join(' ').match(/(\d+)[회回]/) || [])[1] || m.refs.length;
+      return { s: (ev.length ? Math.max(...ev.map(([sec, x]) => base(sec, x))) : 1.5) + Math.min(1.5, 0.5 * Math.max(0, n - 1))
+                 + (it.tier === 1 ? Math.max(0, it.x.run - 1) : 0), k: ev.some(([sec]) => sec === 'stuck') ? 1 : 0 };
+    };
+    const sc = new Map(q.map(it => [it, rank(it)]));
+    q.sort((a, z) => sc.get(z).s - sc.get(a).s || sc.get(z).k - sc.get(a).k);
+  }
   return { ...b, q };
 }
 // 묶음 = 대기열을 10개씩 자른 고정된 칸(1묶음=1~10번, 2묶음=11~20번…). 대기열 순서는 같은 데이터로 계산하니
@@ -2401,7 +2421,7 @@ function fixBatch(fq, skip = false) {
 }
 const qLabel = it => it.tier === 1 ? it.x.rule : it.tier === 2 ? it.m.rule
   : it.sec === 'fix' ? it.it.said : it.sec === 'stuck' ? it.it.wanted : it.it.jp_full;
-const qTag = it => it.tier === 1 ? L('버릇', 'くせ') : it.tier === 2 ? `${shortDate(it.c.date)} ${L('필수', '最優先')}` : `${shortDate(it.c.date)} ${SEC_NAME[it.sec]}`;
+const qTag = it => it.tier === 1 ? (it.x.base ? L('기초 단어', '基礎単語') : L('버릇', 'くせ')) : it.tier === 2 ? `${shortDate(it.c.date)} ${L('필수', '最優先')}` : `${shortDate(it.c.date)} ${SEC_NAME[it.sec]}`;
 const qDoneN = fq => fq.q.filter(it => isDone('callsItem', it.id)).length;
 
 // 목록 화면의 입구 — 지금 묶음의 이름만. 설명은 학습 화면에서.
@@ -3596,6 +3616,7 @@ function runSelfCheck() {
   app.innerHTML = `<pre id="selfcheck-out">${ok ? 'SELFCHECK-PASS' : 'SELFCHECK-FAIL'}\n${esc(out.join('\n'))}</pre>`;
   document.title = ok ? 'SELFCHECK-PASS' : 'SELFCHECK-FAIL';
 }
+let fixLanded = false;            // 테스터 페이지 첫 진입에 10개 학습으로 보냈나
 function route() {
   const h = location.hash.slice(1);
   seqStop();                       // 코너를 옮기면 재생 중인 음성은 끊는다
@@ -3640,6 +3661,10 @@ function route() {
     if (!CALLS && !CALLS_LOCKED) { location.hash = ''; return; }
     setCorner('calls');
     if (!CALLS) { renderCallsLock(); scrollTo(0, 0); return; }
+    // 테스터 페이지(/u/)는 노트를 풀자마자 「지금 고칠 것」 10개 학습부터 — 노트가 한두 개라 목록을 거칠 이유가 없다(2026-10-06 유저).
+    // 첫 진입 한 번만: 학습 화면의 「← 목록」으로 돌아오면 목록을 보여줘야 하니까. replace 라 브라우저 뒤로가기가 되돌아오지 않는다.
+    if (!fixLanded && h === 'calls' && location.pathname.includes('/u/')) { fixLanded = true; location.replace('#calls/fix'); return; }
+    fixLanded = true;
     document.body.dataset.tgt = tgtLang(CALLS.find(x => x.id === h.slice(6)) || CALLS[0]);   // 줄간격 CSS(body[data-tgt=ko])용
     if (h === 'calls/star') { try { localStorage.setItem(STAR_CHIP_KEY, 'calls'); } catch {} location.hash = 'hard'; return; }
     if (h === 'calls/fix') { renderFixStudy(); scrollTo(0, 0); return; }
