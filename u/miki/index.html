@@ -340,40 +340,47 @@
   .ci-ex.ng .jp { color: var(--muted); }
   .ci-try b { display: block; font-size: 11.5px; color: var(--accent); }
   .ci-try .jp { font-size: 14.5px; font-weight: 600; margin: 0; }
-  /* 회화 목록: 왼쪽 통화 / 오른쪽 「지금 고칠 것」 입구. 좁은 화면에선 입구가 위로 와서 한 줄로 줄어든다 */
-  .calls-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 16px; align-items: start; }
+  /* 회화 목록 = 위 「지금 고칠 것」 히어로 + 아래 통화 노트 한 줄 목록(2026-10-07 유저 A안).
+     예전엔 오른쪽 290px 칸이라 부가 기능처럼 보였다 — 모든 통화의 공통 실수를 고치는 게 이 코너의 주인공이다.
+     통화 목록은 「원본·복습」 역할로 내려 한 줄씩. 맥·폰 순서가 같다. */
+  .calls-wrap { max-width: 860px; margin: 0 auto; }
   .list-h { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   .list-h small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 6px; }
-  .call-day { font-size: 15px; font-weight: 800; color: var(--accent); }
-  .call-who { font-size: 12px; font-weight: 700; border-radius: 99px; padding: 1px 9px; margin-left: 8px; background: var(--accent-soft); color: var(--accent); }
-  .calls-main .rowtop .chk { margin-left: auto; }
-  .pchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+  .call-day { font-size: 13.5px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+  .call-who { font-size: 12px; font-weight: 700; border-radius: 99px; padding: 1px 9px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .pchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
   .pchips b { font-weight: 600; opacity: .7; margin-left: 2px; }
-  .calls-main .item h2 { margin: 2px 0 3px; }
-  .calls-side { position: sticky; top: 76px; display: grid; gap: 10px; }
-  .starall.side { margin: 0; text-align: left; border-radius: 14px; }
-  .starall.side small { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); }
-  .fx-entry { position: static; background: var(--card); border: 1px solid var(--stroke); border-top: 4px solid #C8463C;
-    border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); cursor: pointer; }
-  .fx-entry:hover { border-color: #C8463C; }
-  .fx-h { margin: 0; font-size: 16px; font-weight: 800; }
-  .fx-h b { color: #C8463C; }
-  .fx-sub { margin: 2px 0 8px; font-size: 12px; color: var(--muted); }
-  .fx-list { margin: 0 0 10px; padding-left: 20px; font-size: 13.5px; }
-  .fx-list li { margin: 0 0 4px; }
-  .fx-list li .jp { font-size: 13.5px; margin: 0; }
-  .fx-list li em { font-style: normal; font-size: 9px; margin-left: 4px; }
-  .fx-list li.ok { color: var(--muted); text-decoration: line-through; }
-  .fx-go { width: 100%; background: #C8463C; color: #fff; border-color: #C8463C; }
-  @media (max-width: 860px) {
-    .calls-wrap { grid-template-columns: minmax(0, 1fr); }
-    .calls-side { order: -1; position: static; }
-    .fx-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
-    .fx-entry .fx-list { display: none; }
-    .fx-entry .fx-sub { margin: 0; flex: 1; }
-    .fx-entry .fx-go { width: auto; margin-left: auto; }
+  .calls-main .grid { gap: 0; border-top: 1px solid var(--stroke); }
+  .calls-main .item.call-line { display: flex; align-items: center; gap: 8px; padding: 11px 4px; border: 0; border-bottom: 1px solid var(--stroke);
+    border-radius: 0; background: transparent; box-shadow: none; }
+  .calls-main .item.call-line:hover { transform: none; background: var(--accent-soft); }
+  .call-line h2 { flex: 1; min-width: 0; margin: 0; font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .call-line .dur { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .starall.side { margin: 0 0 18px; text-align: left; border-radius: 14px; }
+  .starall.side small { display: inline; margin-left: 8px; font-size: 11.5px; font-weight: 500; color: var(--muted); }
+  .fx-entry { background: var(--card); border: 2px solid #C8463C; border-radius: 16px; padding: 16px 18px; margin: 0 0 18px;
+    box-shadow: var(--shadow); cursor: pointer; }
+  .fx-hh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  .fx-h { margin: 0; font-size: 20px; font-weight: 800; color: #C8463C; }
+  .fx-sub { font-size: 12.5px; color: var(--muted); }
+  .fx-bar { height: 8px; border-radius: 99px; background: var(--stroke); margin: 12px 0 4px; overflow: hidden; }
+  .fx-bar i { display: block; height: 100%; background: #C8463C; border-radius: 99px; }
+  .fx-bar-t { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+  .fx-list { list-style: none; margin: 0; padding: 0; counter-reset: fx; }
+  .fx-list li { counter-increment: fx; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; position: relative; padding: 8px 0 8px 26px; border-top: 1px solid var(--stroke); font-size: 14.5px; }
+  .fx-list li::before { content: counter(fx); position: absolute; left: 0; top: 10px; font-size: 12px; color: var(--muted); }   /* 번호는 줄바꿈과 무관하게 왼쪽 고정 */
+  .fx-list li .jp { flex: 1 1 220px; min-width: 0; margin: 0; font-size: 14.5px; }   /* 좁으면 오른쪽 표시가 아래 줄로 — 글자가 세로로 쪼개지지 않게 */
+  .fx-list li .fx-tag { margin-left: auto; font-style: normal; font-size: 11px; color: #C8463C; white-space: nowrap; }
+  .fx-list li.ok .jp { color: var(--muted); text-decoration: line-through; }
+  .fx-list li.ok .fx-tag { color: var(--accent); }
+  .fx-list li.fx-more-i { display: none; }
+  .fx-more { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+  .fx-go { display: block; width: 100%; margin-top: 12px; padding: 11px; border-radius: 12px; font-size: 15px; font-weight: 700;
+    background: #C8463C; color: #fff; border-color: #C8463C; }
+  @media (max-width: 560px) {
+    .fx-entry { padding: 14px; }
+    .call-line .dur { display: none; }
   }
-  .fx-list li .fx-tag { display: block; font-style: normal; font-size: 10.5px; color: var(--muted); }
   /* 고칠 것 대기열 */
   .fq-all { font-size: 12.5px; color: var(--muted); margin: -4px 0 12px; }
   .fq-item { margin: 0 0 14px; }
@@ -2430,13 +2437,23 @@ function fixEntryHtml() {
   if (!fq) return '';
   const batch = fixBatch(fq);
   const done = batch.filter(it => isDone('callsItem', it.id)).length;
+  const next = batch.findIndex(it => !isDone('callsItem', it.id));
+  const pg = fixPageK(fq) % fixPageCount(fq) + 1, pgN = fixPageCount(fq);
+  // 오른쪽 표시: 끝낸 건 ✓, 여러 통화 연속인 버릇은 🔴×연속 수(왜 지금 해야 하는지), 나머지는 출처 태그
+  const tag = it => isDone('callsItem', it.id) ? '✓' : it.tier === 1 && it.x.run >= 2
+    ? `${'🔴'.repeat(Math.min(it.x.run, 3))} ${L(`${it.x.run}통화 연속`, `${it.x.run}回連続`)}` : qTag(it);
+  const SHOW = 6;   // 히어로엔 6개까지만 — 다 보이면 목록이 화면 밖으로 밀린다. 나머지는 「+N개 더」
+  const go = !batch.length ? '' : next < 0 ? L(`🎉 이번 묶음 끝 · 다음 ${FIX_N}개 →`, `🎉 このセット完了 · 次の${FIX_N}個へ →`)
+    : done ? L(`${next + 1}번부터 이어서 학습 →`, `${next + 1}番から続ける →`) : L('학습 시작 →', '学習を始める →');
   return `
-    <aside class="fx-entry" data-go-fix>
-      <p class="fx-h">${L('🔴 지금 고칠 것', '🔴 いま直すこと')} <b>${batch.length}</b></p>
-      <p class="fx-sub">${batch.length && done === batch.length ? L(`🎉 이번 묶음 끝 · 다음 ${FIX_N}개는 학습 화면에서 열기`, `🎉 このセット完了 · 次の${FIX_N}個は学習画面で`) : L(`이번 묶음 ${done}/${batch.length}`, `このセット ${done}/${batch.length}`)} · ${L(`전체 ${fq.q.length}개 중 ${qDoneN(fq)}개 확인`, `全${fq.q.length}個中 ${qDoneN(fq)}個確認`)}</p>
-      <ol class="fx-list">${batch.map(it => `<li${isDone('callsItem', it.id) ? ' class="ok"' : ''}><span class="jp">${ruby(qLabel(it) || '')}</span><em class="fx-tag">${esc(qTag(it))}</em></li>`).join('')}</ol>
-      <button class="fx-go">${L('학습하러 가기 →', '学習する →')}</button>
-    </aside>`;
+    <section class="fx-entry" data-go-fix>
+      <div class="fx-hh"><h2 class="fx-h">${L('🔴 지금 고칠 것', '🔴 いま直すこと')}</h2><span class="fx-sub">${L(`모든 통화에서 반복된 실수 · ${pg}묶음 / ${pgN}`, `すべての通話のくり返しミス · ${pg}セット目 / ${pgN}`)}</span></div>
+      <div class="fx-bar"><i style="width:${batch.length ? Math.round(done / batch.length * 100) : 0}%"></i></div>
+      <p class="fx-bar-t">${L(`이번 묶음 ${done} / ${batch.length} · 전체 ${fq.q.length}개 중 ${qDoneN(fq)}개 확인`, `このセット ${done} / ${batch.length} · 全${fq.q.length}個中 ${qDoneN(fq)}個確認`)}</p>
+      <ol class="fx-list">${batch.map((it, k) => `<li class="${isDone('callsItem', it.id) ? 'ok' : ''}${k >= SHOW ? ' fx-more-i' : ''}"><span class="jp">${ruby(qLabel(it) || '')}</span><em class="fx-tag">${esc(tag(it))}</em></li>`).join('')}</ol>
+      ${batch.length > SHOW ? `<p class="fx-more">${L(`+ ${batch.length - SHOW}개 더`, `+ あと${batch.length - SHOW}個`)}</p>` : ''}
+      <button class="fx-go">${go}</button>
+    </section>`;
 }
 
 // 다음 묶음 버튼 글자 — 그릴 때와 ✓ 뒤 갱신 때 같은 글자여야 해서 한 곳에 둔다
@@ -2622,21 +2639,18 @@ function renderCallsList() {
   let who = localStorage.getItem(PARTNER_KEY) || '';
   if (who && !names.includes(who)) who = '';
   const shown = who ? CALLS.filter(c => c.partner === who) : CALLS;
-  app.innerHTML = `<div class="calls-wrap"><div class="calls-main">
-    <p class="list-h">${L('💬 대화 목록', '💬 会話リスト')} <small>${L(`${shown.length}개 · 최근 통화가 위`, `${shown.length}件 · 新しい順`)}</small></p>
+  app.innerHTML = `<div class="calls-wrap">${fixEntryHtml()}${starN ? `<button class="starall side" data-go-star>${L('⭐ 회화 노트 별표', '⭐ ★したカード')} <b>${starN}</b><small>${L('⭐ 모아보기에서 보기', '「まとめて見る」で見る')}</small></button>` : ''}<div class="calls-main">
+    <p class="list-h">${L('💬 통화 노트', '💬 通話ノート')} <small>${L(`${shown.length}개 · 최근 통화가 위`, `${shown.length}件 · 新しい順`)}</small></p>
     ${names.length > 1 ? `<div class="pchips">${[['', L('전체', 'すべて'), CALLS.length], ...names.map(n => [n, n, CALLS.filter(c => c.partner === n).length])]
       .map(([k, l, n]) => `<button data-partner="${esc(k)}" class="${k === who ? 'on' : ''}">${esc(l)} <b>${n}</b></button>`).join('')}</div>` : ''}` +
     (shown.length ? '<div class="grid">' + shown.map(c => `
-    <div class="item plain${isDone('calls', c.id) ? ' done' : ''}" data-id="${esc(c.id)}">
-      <div>
-        <div class="rowtop"><span class="call-day">${esc(callDay(c.date))}</span>${c.partner ? `<span class="call-who">${esc(c.partner)}</span>` : ''}${checkBtn('calls', c.id)}</div>
-        <h2>${nat(c.title.replace(/^전화 수다:\s*/, ''))}</h2>
-        <div class="meta"><span>${nat(c.duration)}</span><span>${nat(c.partner ? (c.with || '').replace(/^일본인 친구\s*·\s*/, '') : (c.with || ''))}</span></div>
-        <p>${SEC_NAME.fix} ${c.fixes.length}${c.stuck ? ` · ${SEC_NAME.stuck} ${c.stuck.length}` : ''}${c.missed ? ` · ${SEC_NAME.missed} ${c.missed.length}` : ''} · ${L('가져다 쓸 표현', 'まねしたい表現')} ${c.steal.length} · ${L('새 단어', '新しい単語')} ${c.vocab.length}${callStars(c).length ? ` · ⭐ ${callStars(c).length}` : ''}</p>
-      </div>
+    <div class="item plain call-line${isDone('calls', c.id) ? ' done' : ''}" data-id="${esc(c.id)}">
+      <span class="call-day">${esc(shortDate(c.date))}</span>${c.partner ? `<span class="call-who">${esc(c.partner)}</span>` : ''}
+      <h2>${nat(c.title.replace(/^전화 수다:\s*/, ''))}</h2>
+      <span class="dur">${nat(c.duration)}</span>${checkBtn('calls', c.id)}
     </div>`).join('') + '</div>'
     : `<p class="empty">${L('아직 회화 노트 없음.', 'まだ会話ノートがありません。')}</p>`) + `</div>
-    <div class="calls-side">${fixEntryHtml()}${starN ? `<button class="starall side" data-go-star>${L('⭐ 회화 노트 별표', '⭐ ★したカード')} <b>${starN}</b><small>${L('⭐ 모아보기에서 보기', '「まとめて見る」で見る')}</small></button>` : ''}</div></div>`;
+    </div>`;
   app.querySelectorAll('.item').forEach(el => el.onclick = () => { location.hash = 'calls/' + el.dataset.id; });
   const fx = app.querySelector('[data-go-fix]');
   if (fx) fx.onclick = () => { location.hash = 'calls/fix'; };
@@ -3616,7 +3630,6 @@ function runSelfCheck() {
   app.innerHTML = `<pre id="selfcheck-out">${ok ? 'SELFCHECK-PASS' : 'SELFCHECK-FAIL'}\n${esc(out.join('\n'))}</pre>`;
   document.title = ok ? 'SELFCHECK-PASS' : 'SELFCHECK-FAIL';
 }
-let fixLanded = false;            // 테스터 페이지 첫 진입에 10개 학습으로 보냈나
 function route() {
   const h = location.hash.slice(1);
   seqStop();                       // 코너를 옮기면 재생 중인 음성은 끊는다
@@ -3661,10 +3674,6 @@ function route() {
     if (!CALLS && !CALLS_LOCKED) { location.hash = ''; return; }
     setCorner('calls');
     if (!CALLS) { renderCallsLock(); scrollTo(0, 0); return; }
-    // 테스터 페이지(/u/)는 노트를 풀자마자 「지금 고칠 것」 10개 학습부터 — 노트가 한두 개라 목록을 거칠 이유가 없다(2026-10-06 유저).
-    // 첫 진입 한 번만: 학습 화면의 「← 목록」으로 돌아오면 목록을 보여줘야 하니까. replace 라 브라우저 뒤로가기가 되돌아오지 않는다.
-    if (!fixLanded && h === 'calls' && location.pathname.includes('/u/')) { fixLanded = true; location.replace('#calls/fix'); return; }
-    fixLanded = true;
     document.body.dataset.tgt = tgtLang(CALLS.find(x => x.id === h.slice(6)) || CALLS[0]);   // 줄간격 CSS(body[data-tgt=ko])용
     if (h === 'calls/star') { try { localStorage.setItem(STAR_CHIP_KEY, 'calls'); } catch {} location.hash = 'hard'; return; }
     if (h === 'calls/fix') { renderFixStudy(); scrollTo(0, 0); return; }
