@@ -239,6 +239,7 @@
   .rule-why { font-size: 13.5px; line-height: 1.6; margin: 0 0 12px; padding: 8px 11px; border-radius: 9px;
     background: rgba(200,70,60,.06); color: var(--text); }
   .rule-why::before { content: "왜? "; font-weight: 700; color: #C8463C; }
+  html[lang="ja"] .rule-why::before { content: "なぜ？ "; }
   /* 층마다 배경을 번갈아 둔다 — 묶음(회색) > 말 상자(흰색) > 자세히(회색) */
   .ev-group { background: color-mix(in srgb, var(--text) 5%, var(--card)); border: 1px solid var(--stroke); border-radius: 12px; padding: 10px 10px 4px; }
   .ev-group-h { margin: 0 2px 8px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
@@ -278,6 +279,7 @@
   .ev-core .jp { font-size: 14px; margin: 0; }
   .nope { margin-left: 8px; font-size: 11px; font-weight: 600; padding: 2px 8px; color: var(--muted); }
   .nope:hover { color: #C8463C; border-color: #C8463C; }
+  html[lang="ja"] .nope, html[lang="ja"] .lv { white-space: nowrap; }   /* 일본어는 띄어쓰기가 없어 좁은 화면에서 한 글자씩 세로로 쪼개진다 */
   .ev-head .ev-arr + .nope { margin-left: 8px; }
   .ev-kr b { font-size: 11px; color: var(--muted); }
   .hid-all { font-size: 12px; color: var(--muted); margin: 14px 2px; padding-top: 10px; border-top: 1px dashed var(--stroke); }
@@ -338,40 +340,47 @@
   .ci-ex.ng .jp { color: var(--muted); }
   .ci-try b { display: block; font-size: 11.5px; color: var(--accent); }
   .ci-try .jp { font-size: 14.5px; font-weight: 600; margin: 0; }
-  /* 회화 목록: 왼쪽 통화 / 오른쪽 「지금 고칠 것」 입구. 좁은 화면에선 입구가 위로 와서 한 줄로 줄어든다 */
-  .calls-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 16px; align-items: start; }
+  /* 회화 목록 = 위 「지금 고칠 것」 히어로 + 아래 통화 노트 한 줄 목록(2026-10-07 유저 A안).
+     예전엔 오른쪽 290px 칸이라 부가 기능처럼 보였다 — 모든 통화의 공통 실수를 고치는 게 이 코너의 주인공이다.
+     통화 목록은 「원본·복습」 역할로 내려 한 줄씩. 맥·폰 순서가 같다. */
+  .calls-wrap { max-width: 860px; margin: 0 auto; }
   .list-h { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   .list-h small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 6px; }
-  .call-day { font-size: 15px; font-weight: 800; color: var(--accent); }
-  .call-who { font-size: 12px; font-weight: 700; border-radius: 99px; padding: 1px 9px; margin-left: 8px; background: var(--accent-soft); color: var(--accent); }
-  .calls-main .rowtop .chk { margin-left: auto; }
-  .pchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+  .call-day { font-size: 13.5px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+  .call-who { font-size: 12px; font-weight: 700; border-radius: 99px; padding: 1px 9px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .pchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
   .pchips b { font-weight: 600; opacity: .7; margin-left: 2px; }
-  .calls-main .item h2 { margin: 2px 0 3px; }
-  .calls-side { position: sticky; top: 76px; display: grid; gap: 10px; }
-  .starall.side { margin: 0; text-align: left; border-radius: 14px; }
-  .starall.side small { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); }
-  .fx-entry { position: static; background: var(--card); border: 1px solid var(--stroke); border-top: 4px solid #C8463C;
-    border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); cursor: pointer; }
-  .fx-entry:hover { border-color: #C8463C; }
-  .fx-h { margin: 0; font-size: 16px; font-weight: 800; }
-  .fx-h b { color: #C8463C; }
-  .fx-sub { margin: 2px 0 8px; font-size: 12px; color: var(--muted); }
-  .fx-list { margin: 0 0 10px; padding-left: 20px; font-size: 13.5px; }
-  .fx-list li { margin: 0 0 4px; }
-  .fx-list li .jp { font-size: 13.5px; margin: 0; }
-  .fx-list li em { font-style: normal; font-size: 9px; margin-left: 4px; }
-  .fx-list li.ok { color: var(--muted); text-decoration: line-through; }
-  .fx-go { width: 100%; background: #C8463C; color: #fff; border-color: #C8463C; }
-  @media (max-width: 860px) {
-    .calls-wrap { grid-template-columns: minmax(0, 1fr); }
-    .calls-side { order: -1; position: static; }
-    .fx-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
-    .fx-entry .fx-list { display: none; }
-    .fx-entry .fx-sub { margin: 0; flex: 1; }
-    .fx-entry .fx-go { width: auto; margin-left: auto; }
+  .calls-main .grid { gap: 0; border-top: 1px solid var(--stroke); }
+  .calls-main .item.call-line { display: flex; align-items: center; gap: 8px; padding: 11px 4px; border: 0; border-bottom: 1px solid var(--stroke);
+    border-radius: 0; background: transparent; box-shadow: none; }
+  .calls-main .item.call-line:hover { transform: none; background: var(--accent-soft); }
+  .call-line h2 { flex: 1; min-width: 0; margin: 0; font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .call-line .dur { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .starall.side { margin: 0 0 18px; text-align: left; border-radius: 14px; }
+  .starall.side small { display: inline; margin-left: 8px; font-size: 11.5px; font-weight: 500; color: var(--muted); }
+  .fx-entry { background: var(--card); border: 2px solid #C8463C; border-radius: 16px; padding: 16px 18px; margin: 0 0 18px;
+    box-shadow: var(--shadow); cursor: pointer; }
+  .fx-hh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  .fx-h { margin: 0; font-size: 20px; font-weight: 800; color: #C8463C; }
+  .fx-sub { font-size: 12.5px; color: var(--muted); }
+  .fx-bar { height: 8px; border-radius: 99px; background: var(--stroke); margin: 12px 0 4px; overflow: hidden; }
+  .fx-bar i { display: block; height: 100%; background: #C8463C; border-radius: 99px; }
+  .fx-bar-t { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+  .fx-list { list-style: none; margin: 0; padding: 0; counter-reset: fx; }
+  .fx-list li { counter-increment: fx; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; position: relative; padding: 8px 0 8px 26px; border-top: 1px solid var(--stroke); font-size: 14.5px; }
+  .fx-list li::before { content: counter(fx); position: absolute; left: 0; top: 10px; font-size: 12px; color: var(--muted); }   /* 번호는 줄바꿈과 무관하게 왼쪽 고정 */
+  .fx-list li .jp { flex: 1 1 220px; min-width: 0; margin: 0; font-size: 14.5px; }   /* 좁으면 오른쪽 표시가 아래 줄로 — 글자가 세로로 쪼개지지 않게 */
+  .fx-list li .fx-tag { margin-left: auto; font-style: normal; font-size: 11px; color: #C8463C; white-space: nowrap; }
+  .fx-list li.ok .jp { color: var(--muted); text-decoration: line-through; }
+  .fx-list li.ok .fx-tag { color: var(--accent); }
+  .fx-list li.fx-more-i { display: none; }
+  .fx-more { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+  .fx-go { display: block; width: 100%; margin-top: 12px; padding: 11px; border-radius: 12px; font-size: 15px; font-weight: 700;
+    background: #C8463C; color: #fff; border-color: #C8463C; }
+  @media (max-width: 560px) {
+    .fx-entry { padding: 14px; }
+    .call-line .dur { display: none; }
   }
-  .fx-list li .fx-tag { display: block; font-style: normal; font-size: 10.5px; color: var(--muted); }
   /* 고칠 것 대기열 */
   .fq-all { font-size: 12.5px; color: var(--muted); margin: -4px 0 12px; }
   .fq-item { margin: 0 0 14px; }
@@ -407,6 +416,14 @@
   .fb-try { display: block; font-size: 12.5px; color: var(--muted); }
   .upline { display: block; width: 100%; text-align: left; font-size: 13px; font-weight: 700; color: #C8463C;
     background: rgba(200,70,60,.08); border: 0; border-radius: 10px; padding: 9px 12px; margin: 0 0 12px; }
+  /* target:"ko" 노트(body[data-tgt=ko], route 가 붙인다): 목표 언어 칸(.jp)은 한국어라 루비가 없어 줄간격을 되돌리고,
+     후리가나는 뜻·설명(일본어) 칸에 붙으므로 그쪽 줄간격을 연다 */
+  body[data-tgt="ko"]:not(.no-furi) .jp, body[data-tgt="ko"]:not(.no-furi) .ev-x,
+  body[data-tgt="ko"]:not(.no-furi) .ev-o, body[data-tgt="ko"]:not(.no-furi) .ev-s { line-height: 1.75; }
+  /* 한국어는 어절(띄어쓰기) 단위로 줄을 바꾼다 — lang=ja 문서에선 브라우저가 「눈|물」처럼 음절 사이에서 끊는다.
+     띄어쓰기 없는 일본어가 섞여도 넘치지 않게 overflow-wrap 으로 받친다 */
+  body[data-tgt="ko"] :is(.jp, .ev-x, .ev-o, .ev-s) { word-break: keep-all; overflow-wrap: anywhere; }
+  body[data-tgt="ko"]:not(.no-furi) :is(.kr, .why, .wanted, .ev-kr, .rule-why, .pw, .ctx-kr, .mn, .fx-note, .ev-more, .key, .ev-want) { line-height: 2; }
   /* 후리가나가 한자보다 길 때 한자 사이가 벌어지지 않게 (예: 状況 → 「状  況」) */
   ruby { ruby-align: center; }
   .fix.playing { border-color: var(--accent); }
@@ -582,59 +599,59 @@
 </head>
 <body>
 <header>
-  <h1>일본어 연습 아카이브</h1>
+  <h1 data-ja="韓国語 会話ノート">일본어 연습 아카이브</h1>
   <nav class="corners">
-    <button id="cornerYt">유튜브 노트</button>
-    <button id="cornerCalls" hidden>회화 노트</button>
-    <button id="cornerNhk" hidden>NHK 듣기</button>
-    <button id="cornerHard">⭐ 모아보기</button>
-    <button id="cornerVocab">단어장</button>
+    <button id="cornerYt" data-ja="YouTubeノート">유튜브 노트</button>
+    <button id="cornerCalls" hidden data-ja="会話ノート">회화 노트</button>
+    <button id="cornerNhk" hidden data-ja="NHK リスニング">NHK 듣기</button>
+    <button id="cornerHard" data-ja="⭐ まとめて見る">⭐ 모아보기</button>
+    <button id="cornerVocab" data-ja="単語帳">단어장</button>
   </nav>
-<button id="savePop" hidden>＋ 단어장에 저장</button>
+<button id="savePop" hidden data-ja="＋ 単語帳に保存">＋ 단어장에 저장</button>
   <span class="count" id="count"></span>
   <span class="spacer"></span>
   <button id="toggleFuri">후리가나</button>
   <button id="toggleKr">번역 가리기</button>
   <button id="toggleLoop">반복</button>
-  <button id="openSync">동기화</button>
+  <button id="openSync" data-ja="同期">동기화</button>
 </header>
 <div id="syncPanel" hidden>
   <div class="sync-card">
-    <h3>기기 간 동기화</h3>
+    <h3 data-ja="端末間の同期">기기 간 동기화</h3>
     <div class="sync-auto">
       <div class="sync-row">
         <b class="autostate"></b>
         <span class="note-sm" id="autoMsg"></span>
       </div>
       <div class="sync-row">
-        <input id="keyIn" class="search" style="margin:0" placeholder="다른 기기의 연결 키를 붙여넣기">
-        <button id="keySave">연결</button>
+        <input id="keyIn" class="search" style="margin:0" placeholder="다른 기기의 연결 키를 붙여넣기" data-ja-ph="ほかの端末の連携キーを貼り付け">
+        <button id="keySave" data-ja="連携">연결</button>
       </div>
       <div class="sync-row">
-        <button id="keyCopy">이 기기 키 복사</button>
-        <button id="keyLink">연결 링크 복사</button>
-        <button id="keyMake">새 키 만들기</button>
-        <button id="keyOff">연결 끊기</button>
+        <button id="keyCopy" data-ja="この端末のキーをコピー">이 기기 키 복사</button>
+        <button id="keyLink" data-ja="連携リンクをコピー">연결 링크 복사</button>
+        <button id="keyMake" data-ja="新しいキーを作る">새 키 만들기</button>
+        <button id="keyOff" data-ja="連携を解除">연결 끊기</button>
       </div>
-      <p class="note-sm">키를 넣은 기기끼리 <b>자동으로</b> 맞춰진다 — 저장할 때 올리고, 창으로 돌아올 때 받는다.
+      <p class="note-sm" data-ja="キーを入れた端末どうしで&lt;b&gt;自動で&lt;/b&gt;そろいます。保存したときに送り、画面に戻ったときに受け取ります。">키를 넣은 기기끼리 <b>자동으로</b> 맞춰진다 — 저장할 때 올리고, 창으로 돌아올 때 받는다.
         <b>NHK 교재 관련은 올라가지 않는다</b>(폰엔 교재가 없어 못 쓰고, 기기 밖으로 내보내지 않는다).</p>
     </div>
-    <h3 style="margin-top:18px">수동으로 옮기기</h3>
-    <p>인터넷이 없거나 키를 쓰기 싫을 때. 기기끼리 <b>합친다</b> — 덮어쓰지 않는다.
+    <h3 style="margin-top:18px" data-ja="手動で移す">수동으로 옮기기</h3>
+    <p data-ja="ネットがないときや、キーを使いたくないときに。上書きではなく&lt;b&gt;合わせます&lt;/b&gt;。項目ごとに、あとから押したほうが残ります。">인터넷이 없거나 키를 쓰기 싫을 때. 기기끼리 <b>합친다</b> — 덮어쓰지 않는다.
       항목마다 더 최근에 누른 쪽이 이긴다.</p>
     <div class="sync-row">
-      <button id="copySync">이 기기 상태 복사</button>
+      <button id="copySync" data-ja="この端末の状態をコピー">이 기기 상태 복사</button>
       <span class="note-sm" id="copyMsg"></span>
     </div>
     <textarea id="syncIn" class="search" rows="3"
-      placeholder="다른 기기에서 복사한 코드를 여기 붙여넣기"></textarea>
+      placeholder="다른 기기에서 복사한 코드를 여기 붙여넣기" data-ja-ph="ほかの端末でコピーしたコードをここに貼り付け"></textarea>
     <div class="sync-row">
-      <button id="applySync">합치기</button>
+      <button id="applySync" data-ja="合わせる">합치기</button>
       <span class="note-sm" id="applyMsg"></span>
     </div>
-    <p class="note-sm">아이폰↔맥은 복사하면 반대쪽에서 그냥 붙여넣기가 된다(유니버설 클립보드).
+    <p class="note-sm" data-ja="iPhone↔Mac ならコピーしてそのまま貼り付けられます（ユニバーサルクリップボード）。うまくいかないときは、メモやメッセージで自分に送ってもOKです。">아이폰↔맥은 복사하면 반대쪽에서 그냥 붙여넣기가 된다(유니버설 클립보드).
       안 되면 메모·메시지로 자신에게 보내도 된다.</p>
-    <div class="sync-row"><button id="closeSync">닫기</button></div>
+    <div class="sync-row"><button id="closeSync" data-ja="閉じる">닫기</button></div>
   </div>
 </div>
 <main id="app"></main>
@@ -658,7 +675,7 @@ function loadStore(key) {
   const bak = read(key + '.bak');
   if (bak && Object.keys(bak).length) {
     localStorage.setItem(key, JSON.stringify(bak));
-    setTimeout(() => toast('저장본이 비어 있어 사본에서 되살렸다'), 400);
+    setTimeout(() => toast(L('저장본이 비어 있어 사본에서 되살렸다', '保存データが空だったので、バックアップから戻しました')), 400);
     return bak;
   }
   return main || {};
@@ -691,6 +708,30 @@ const mmss = t => Math.floor(t/60) + ':' + String(Math.floor(t%60)).padStart(2,'
 // rt 는 CSS 로 숨기므로, 후리가나를 꺼도 본문 글자는 그대로 남는다.
 const ruby = s => esc(s).replace(/\{([^|{}]+)\|([^|{}]+)\}/g,
   (_, base, rd) => `<ruby>${base}<rt>${rd}</rt></ruby>`);
+
+// ---- 화면 언어 (UI) ----
+// 후유 본인 사이트 = 한국어(<html lang="ko">). 테스터(일본인 한국어 학습자) 페이지 = 일본어 —
+// deploy_tester.sh 가 복사본의 <html lang> 을 ja 로 바꾼다(UI_LANG=ko 로 덮을 수 있다).
+// 노트 데이터가 아니라 빌드 때 정하는 이유: 잠금 화면은 노트를 풀기 전에 떠야 한다.
+// 문구는 L('한국어', '日本語') 로 그 자리에 둘 다 적는다 — 키 사전을 따로 두면 한국어 원문이
+// 코드에서 사라져 후유 사이트 문구를 고칠 때 찾기 어렵고, 한쪽만 고치는 사고가 난다.
+// 정적 HTML 문구는 data-ja(본문)·data-ja-ph(placeholder) 속성에 일본어를 적어 두고 시작할 때 바꾼다.
+const UI = document.documentElement.lang === 'ja' ? 'ja' : 'ko';
+const L = (ko, ja) => (UI === 'ja' ? ja : ko);
+if (UI === 'ja') {
+  document.querySelectorAll('[data-ja]').forEach(el => { el.innerHTML = el.dataset.ja; });
+  document.querySelectorAll('[data-ja-ph]').forEach(el => { el.placeholder = el.dataset.jaPh; });
+  document.title = '韓国語 会話ノート';
+}
+// 노트의 목표 언어 = 「jp」 계열 칸(said·natural·jp·parts[].jp …)에 든 말. 없으면 일본어(후유 노트).
+// target:"ko" 노트(일본인이 한국어를 배움)는 칸의 역할은 그대로고 언어만 뒤집힌다 —
+// 목표 언어 칸 = 한국어(후리가나 없음), 뜻(kr)·설명(why·note…) 칸 = 일본어(후리가나가 들어올 수 있음).
+// 노트가 없을 때(잠금 화면·단어장)는 화면 언어로 짐작한다.
+const tgtLang = c => (c ? c.target || 'ja' : UI === 'ja' ? 'ko' : 'ja');
+const tgtName = c => ({ ko: L('한국어', '韓国語'), ja: L('일본어', '日本語') })[tgtLang(c)];
+// 회화 노트의 모국어 칸(뜻·설명·배지·통계·제목)은 esc 대신 이걸로 그린다. target:"ko" 노트는 이 칸이 일본어라
+// {漢字|かな} 후리가나가 들어온다. 마크업이 없는 한국어 설명에선 esc 와 글자 하나 다르지 않다.
+const nat = s => ruby(s);
 
 // ---- 완료 표시 ----
 // 정적 사이트라 서버가 없다 → localStorage. 주소·기기마다 따로 쌓인다는 뜻이다
@@ -953,10 +994,10 @@ async function pullCloud(loud) {
     }
     const n = mergeState(safe);
     if (n) { route(); }
-    if (loud) toast(n ? `동기화 — ${n}개 반영됨` : '동기화 — 이미 최신');
+    if (loud) toast(n ? L(`동기화 — ${n}개 반영됨`, `同期 — ${n}件反映しました`) : L('동기화 — 이미 최신', '同期 — すでに最新です'));
     return n;
   } catch {
-    if (loud) toast('동기화 실패 — 인터넷을 확인해라');
+    if (loud) toast(L('동기화 실패 — 인터넷을 확인해라', '同期できませんでした — ネット接続を確認してください'));
     return 0;
   } finally {
     syncing = false;
@@ -1036,7 +1077,7 @@ async function syncLink() {
 
 const checkBtn = (kind, id) =>
   `<button class="chk${isDone(kind, id) ? ' on' : ''}" data-kind="${kind}" data-done-id="${esc(id)}"
-     title="완료 표시">✓</button>`;
+     title="${L('완료 표시', '完了にする')}">✓</button>`;
 
 // 목록의 체크 버튼은 카드 클릭(=상세 진입)과 겹치므로 전파를 끊는다.
 function wireChecks(root, onChange) {
@@ -1071,9 +1112,9 @@ function setupToggle(btnId, cls, key, onLabel, offLabel, defaultOn) {
   };
   sync();
 }
-setupToggle('toggleFuri', 'no-furi', 'furi', '후리가나 켬', '후리가나 끔', true);
-setupToggle('toggleKr', 'hide-kr', 'kr', '번역 보임', '번역 가림', true);
-setupToggle('toggleLoop', 'no-loop', 'loop', '반복 켬', '반복 끔', false);
+setupToggle('toggleFuri', 'no-furi', 'furi', L('후리가나 켬', 'ふりがな ON'), L('후리가나 끔', 'ふりがな OFF'), true);
+setupToggle('toggleKr', 'hide-kr', 'kr', L('번역 보임', '和訳 ON'), L('번역 가림', '和訳 OFF'), true);
+setupToggle('toggleLoop', 'no-loop', 'loop', L('반복 켬', 'リピート ON'), L('반복 끔', 'リピート OFF'), false);
 const loopOn = () => !document.body.classList.contains('no-loop');
 
 // ---- 구간 오디오 재생 ----
@@ -1230,7 +1271,7 @@ function renderList() {
         <p>${esc(v.summary || '')}</p>
       </div>
     </div>`).join('') + '</div>'
-    : '<p class="empty">아직 영상 없음.</p>';
+    : `<p class="empty">${L('아직 영상 없음.', 'まだ動画がありません。')}</p>`;
   app.querySelectorAll('.item').forEach(el => el.onclick = () => { location.hash = el.dataset.id; });
   wireChecks(app, () => updateCount('yt'));
 }
@@ -1239,12 +1280,12 @@ function renderList() {
 function doneBar(kind, id, label) {
   return `<div class="donebar">
     ${checkBtn(kind, id)}
-    <span class="note-sm" id="doneLabel">${isDone(kind, id) ? '완료함' : label}</span>
+    <span class="note-sm" id="doneLabel">${isDone(kind, id) ? L('완료함', '完了') : label}</span>
   </div>`;
 }
 function wireDoneBar(kind, id, label) {
   wireChecks(app.querySelector('.donebar'), () => {
-    document.getElementById('doneLabel').textContent = isDone(kind, id) ? '완료함' : label;
+    document.getElementById('doneLabel').textContent = isDone(kind, id) ? L('완료함', '完了') : label;
     updateCount(kind);
   });
 }
@@ -1949,9 +1990,10 @@ function renderVocab() {
     v.w.includes(q) || (v.r || '').includes(q) || (v.s || '').includes(q) || (v.label || '').includes(q)) : all;
 
   app.innerHTML = `
-    <input class="search" id="vocabQ" placeholder="단어·읽기·문장 검색" value="${esc(q)}">
-    ${all.length ? `<p class="hint">${hits.length}개${q ? ` (전체 ${all.length})` : ''}.
-      일본어 문장을 <b>드래그</b>하면 저장 버튼이 뜬다.</p>` : ''}
+    <input class="search" id="vocabQ" placeholder="${L('단어·읽기·문장 검색', '単語・読み・文で検索')}" value="${esc(q)}">
+    ${all.length ? `<p class="hint">${L(`${hits.length}개${q ? ` (전체 ${all.length})` : ''}.
+      ${tgtName((CALLS || [])[0])} 문장을 <b>드래그</b>하면 저장 버튼이 뜬다.`, `${hits.length}件${q ? `（全${all.length}件）` : ''}。
+      ${tgtName((CALLS || [])[0])}の文を<b>ドラッグ</b>すると保存ボタンが出ます。`)}</p>` : ''}
     ${hits.length ? `<div class="vocab">${hits.map(v => `
       <div class="word" data-key="${esc(v.key)}">
         <div class="hd"><span class="w">${ruby(v.wr || v.w)}</span>
@@ -1959,12 +2001,12 @@ function renderVocab() {
         ${v.s ? `<p class="ctx">${highlightIn(v.s, v.w)}</p>` : ''}
         <div class="foot">
           <span class="lbl">${esc(v.label || '')}</span>
-          ${v.h ? '<button class="go">문장으로</button>' : ''}
-          <button class="del">삭제</button>
+          ${v.h ? `<button class="go">${L('문장으로', '文へ')}</button>` : ''}
+          <button class="del">${L('삭제', '削除')}</button>
         </div>
       </div>`).join('')}</div>`
-      : `<p class="empty">${all.length ? '검색 결과 없음.'
-        : '아직 없다. 일본어 문장을 드래그하면 저장 버튼이 뜬다.'}</p>`}`;
+      : `<p class="empty">${all.length ? L('검색 결과 없음.', '見つかりませんでした。')
+        : L(`아직 없다. ${tgtName((CALLS || [])[0])} 문장을 드래그하면 저장 버튼이 뜬다.`, `まだありません。${tgtName((CALLS || [])[0])}の文をドラッグすると保存ボタンが出ます。`)}</p>`}`;
 
   const input = document.getElementById('vocabQ');
   input.oninput = () => {
@@ -2022,6 +2064,9 @@ const STAR_CHIP_KEY = 'starChip';
 function renderHard() {
   let chip = 'all';
   try { chip = localStorage.getItem(STAR_CHIP_KEY) || 'all'; } catch {}
+  // 유튜브·NHK 가 없는 배포(테스터 페이지)는 회화 노트 ★만 있다 — 칩·빈 「어려운 문장」 칸을 안 보인다
+  const onlyCalls = !VIDEOS.length && !NHK.length;
+  if (onlyCalls) chip = 'calls';
   const every = hardList();
   const isNhk = v => v.kind === 'nhk';
   const all = chip === 'yt' ? every.filter(v => !isNhk(v)) : chip === 'nhk' ? every.filter(isNhk) : chip === 'calls' ? [] : every;
@@ -2034,15 +2079,15 @@ function renderHard() {
   const withStars = CALLS ? CALLS.filter(c => callStars(c).length) : [];
   const callsHtml = chip === 'all' || chip === 'calls' ? `
     ${chip === 'all' ? '<p class="star-src">💬 회화 노트 ★</p>' : ''}
-    ${!CALLS ? '<p class="empty">회화 노트가 잠겨 있다 — 회화 노트에서 암호를 넣으면 여기도 보인다.</p>'
+    ${!CALLS ? `<p class="empty">${L('회화 노트가 잠겨 있다 — 회화 노트에서 암호를 넣으면 여기도 보인다.', '会話ノートはロック中です — 会話ノートでパスワードを入れると、ここにも表示されます。')}</p>`
       : withStars.length ? withStars.map(c => `
         <section class="star-call" data-call-id="${esc(c.id)}">
-          <h3 class="star-call-h">${esc(callDay(c.date))}${c.partner ? ` · ${esc(c.partner)}` : ''} · ${esc(c.title.replace(/^전화 수다:\s*/, ''))}</h3>
+          <h3 class="star-call-h">${esc(callDay(c.date))}${c.partner ? ` · ${esc(c.partner)}` : ''} · ${nat(c.title.replace(/^전화 수다:\s*/, ''))}</h3>
           ${starCardsHtml(c)}
-        </section>`).join('') : chip === 'calls' ? '<p class="empty">아직 회화 노트에서 ★한 카드가 없다.</p>' : ''}` : '';
+        </section>`).join('') : chip === 'calls' ? `<p class="empty">${L('아직 회화 노트에서 ★한 카드가 없다.', 'まだ★したカードはありません。カード右上の ★ を押すと、ここに集まります。')}</p>` : ''}` : '';
 
   app.innerHTML = `
-    <div class="pchips star-chips">${chips.map(([k, l, n]) => `<button data-star-chip="${k}" class="${k === chip ? 'on' : ''}">${l} <b>${n}</b></button>`).join('')}</div>
+    ${onlyCalls ? '' : `<div class="pchips star-chips">${chips.map(([k, l, n]) => `<button data-star-chip="${k}" class="${k === chip ? 'on' : ''}">${l} <b>${n}</b></button>`).join('')}</div>`}
     ${chip === 'calls' ? '' : `<input class="search" id="hardQ" placeholder="문장·자료 검색" value="${esc(q)}">`}
     ${callsHtml}
     ${chip === 'calls' ? '' : `${chip === 'all' && (every.length || withStars.length) ? '<p class="star-src">📺 유튜브 · 📻 NHK 어려운 문장</p>' : ''}
@@ -2203,31 +2248,31 @@ function wireCallClips(c, root = app) {
       el.onclick = (e) => { e.stopPropagation(); play(el); };
     });
   }).catch(() => {
-    root.querySelectorAll('.clip-btn').forEach(b => { b.textContent = '음성 못 불러옴'; });
+    root.querySelectorAll('.clip-btn').forEach(b => { b.textContent = L('음성 못 불러옴', '音声を読み込めません'); });
   });
 }
 
 function renderCallsLock() {
   app.innerHTML = `
     <div class="lock">
-      <h2>🔒 회화 노트</h2>
-      <p>실제 통화에서 나온 문장이라 잠가뒀다.</p>
+      <h2>${L('🔒 회화 노트', '🔒 会話ノート')}</h2>
+      <p>${L('실제 통화에서 나온 문장이라 잠가뒀다.', '実際の通話から作ったノートなので、パスワードで保護しています。')}</p>
       <input type="password" id="callsPass" autocomplete="off" autofocus>
-      <label><input type="checkbox" id="callsRemember" checked> 이 기기에서 기억</label>
-      <button id="callsOpen">열기</button>
+      <label><input type="checkbox" id="callsRemember" checked> ${L('이 기기에서 기억', 'この端末で記憶する')}</label>
+      <button id="callsOpen">${L('열기', '開く')}</button>
       <p class="err" id="callsErr"></p>
     </div>`;
   const input = document.getElementById('callsPass');
   const err = document.getElementById('callsErr');
   const open = async () => {
-    err.textContent = '여는 중…';
+    err.textContent = L('여는 중…', '開いています…');
     try {
       CALLS = await decryptCalls(CALLS_LOCKED, input.value);
       CALLS_PASS = input.value;
       if (document.getElementById('callsRemember').checked) localStorage.setItem(CALLS_PASS_KEY, input.value);
       route();
     } catch {
-      err.textContent = '암호가 다르다.';
+      err.textContent = L('암호가 다르다.', 'パスワードが違います。');
       input.select();
     }
   };
@@ -2246,6 +2291,7 @@ function renderCallsLock() {
 //       ✓하면 각 통화 노트의 같은 필수(links)와 그 증거 카드도 확인 처리한다(켤 때만 — 끌 때 노트 쪽 기록은 건드리지 않는다).
 const FIX_N = 10;
 const ruleKey = t => { let h = 0; for (const ch of t) h = (h * 31 + ch.codePointAt(0)) >>> 0; return h.toString(36); };
+const isBaseWord = m => ((m && m.badges) || []).includes('基礎単語');
 function fixBoard() {
   const latest = (CALLS || []).find(c => c.must && c.must.length);
   if (!latest) return null;
@@ -2259,7 +2305,7 @@ function fixBoard() {
     if (x.must_idx != null && !links.includes(`${latest.id}:${x.must_idx}`)) links.push(`${latest.id}:${x.must_idx}`);
     // relapse = 졸업했던 규칙을 다시 틀림. 한 번 고쳤다 돌아온 버릇이라 최소 2통화 연속 급으로 올린다(유저 확정).
     const bad = x.v === 'again' || x.v === 'relapse';
-    all.push({ rule: x.rule, kind: bad ? 'again' : 'none', relapse: x.v === 'relapse',
+    all.push({ rule: x.rule, kind: bad ? 'again' : 'none', relapse: x.v === 'relapse', base: isBaseWord(m || originOf(x.rule)),
       run: x.v === 'relapse' ? Math.max(2, (x.streak || 1) + 1) : x.v === 'again' ? (x.streak || 1) + 1 : 0, ng: x.ng || 0,
       why: (m || originOf(x.rule) || {}).why || '', note: x.note || '',
       ngEx: (x.ng_ex || []).map(e => ({ ...e, hideId: carryHideId(latest, x, 'ng', e) })),
@@ -2279,12 +2325,12 @@ function fixBoard() {
   }
   latest.must.forEach((m, i) => {
     if (used.has(i)) return;
-    const n = +((m.badges || []).join(' ').match(/(\d+)회/) || [])[1] || m.refs.length;
+    const n = +((m.badges || []).join(' ').match(/(\d+)[회回]/) || [])[1] || m.refs.length;   // 回 = target:"ko" 노트(일본어 배지)
     const ev = effRefs(latest, i).map(r => refItem(latest, r)).filter(([, it]) => it);
     const ngEx = cardEx(latest, i);
     // 무게용 심각도: 고칠 표현·막힌 순간은 조각 판정으로, 못 알아들은 순간은 틀림으로 본다
     const lvs = ev.map(([sec, it]) => sec === 'missed' ? 'bad' : fixLv(it));
-    all.push({ rule: m.rule, kind: 'new', run: 1, ng: Math.max(0, n - hiddenRefs(latest, i).length), why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`], lvs, hidden: hiddenRefs(latest, i) });
+    all.push({ rule: m.rule, kind: 'new', run: 1, base: isBaseWord(m), ng: Math.max(0, n - hiddenRefs(latest, i).length), why: m.why || '', note: '', ngEx, okEx: [], try: '', links: [`${latest.id}:${i}`], lvs, hidden: hiddenRefs(latest, i) });
   });
   // 순위 점수(유저 확정 2026-10-01): 연속 통화 수 × 무게 + 마지막 통화 횟수 × 0.1(최대 0.5).
   //   무게 = 마지막 통화에 ❌ 틀림이 하나라도 있으면 1, 🔸 어색함뿐이면 0.5.
@@ -2305,9 +2351,9 @@ function fixBoard() {
   return { latest, all, top: all.slice(0, FIX_N), wait: all.slice(FIX_N), grad };
 }
 const shortDate = d => (d || '').slice(5).replace('-', '/');
-const fxBadge = x => (x.soft ? '<span class="bd soft">🔸 말투(어색함)</span>' : '')
-  + (x.relapse ? `<span class="bd hot">🔁 졸업 후 다시 틀림</span>` : x.kind === 'again' ? `<span class="bd hot">${'🔴'.repeat(Math.min(x.run, 3))} ${x.run}통화 연속</span>`
-  : x.kind === 'new' ? '<span class="bd">최근 통화에 새로</span>' : '<span class="bd g">⚪ 쓸 기회 없었음</span>');
+const fxBadge = x => (x.soft ? `<span class="bd soft">${L('🔸 말투(어색함)', '🔸 言い方（不自然）')}</span>` : '')
+  + (x.relapse ? `<span class="bd hot">${L('🔁 졸업 후 다시 틀림', '🔁 卒業後にまた間違えた')}</span>` : x.kind === 'again' ? `<span class="bd hot">${'🔴'.repeat(Math.min(x.run, 3))} ${L(`${x.run}통화 연속`, `通話${x.run}回連続`)}</span>`
+  : x.kind === 'new' ? `<span class="bd">${L('최근 통화에 새로', '最近の通話で新しく')}</span>` : `<span class="bd g">${L('⚪ 쓸 기회 없었음', '⚪ 使う機会がなかった')}</span>`);
 
 // ---- 고칠 것 대기열: 10개씩 묶음 ----
 // 순위(fixBoard)는 통화 판정 때만 바뀌지만, 보여주는 묶음은 공부하면서 넘어간다(유저, 2026-10-01).
@@ -2317,7 +2363,7 @@ const fxBadge = x => (x.soft ? '<span class="bd soft">🔸 말투(어색함)</sp
 // 묶음 = 안 한 것 10개. 10개를 다 ✓하면 다음 10개, 「다음 10개 보기」로 건너뛸 수도 있다(남은 건 다음 바퀴에).
 // 새 통화가 들어오면(기준 통화가 바뀌면) 처음부터 다시. 2·3단 ✓는 노트의 체크와 같은 것이라 노트에도 남는다.
 // 묶음 구성은 이 기기에만 기억한다(체크 자체는 동기화된다).
-const SEC_NAME = { fix: '고칠 표현', stuck: '막힌 순간', missed: '못 알아들은 순간' };
+const SEC_NAME = { fix: L('고칠 표현', '直したい表現'), stuck: L('막힌 순간', '言えなかったこと'), missed: L('못 알아들은 순간', '聞き取れなかったこと') };
 function fixQueue() {
   const b = fixBoard();
   if (!b) return null;
@@ -2335,6 +2381,25 @@ function fixQueue() {
     }));
     cards.sort((a, z) => a.o - z.o || z.w - a.w || byT(a.it, z.it));
     q.push(...cards);
+  }
+  // 일본인 한국어 학습자 노트(target:"ko")는 칸 종류가 아니라 한 점수로 섞어 세운다(2026-10-06 유저:
+  // 「막힌 문장·자주 틀리는 것·몰랐던 필수 단어가 복합적으로 우선순위별로」). 후유 노트는 위 순서 그대로.
+  //   기본 = 몰랐던 기초 단어(基礎単語) 3 · 막힌 문장 2 · 틀림❌·못 알아들음 1.5 · 어색함🔸 1
+  //   가산 = 같은 실수 한 번 더마다 +0.5(최대 1.5) + 지난 통화부터 이어 틀린 연속 통화마다 +1
+  //   같은 점수면 기초 단어 > 막힌 문장 > 나머지, 그다음 원래 순서(정렬이 안정적이라 유지된다).
+  if (tgtLang(b.latest) === 'ko') {
+    const base = (sec, it) => sec === 'stuck' ? 2 : sec === 'missed' || fixLv(it) === 'bad' ? 1.5 : 1;
+    const rank = it => {
+      if (it.tier === 3) return { s: base(it.sec, it.it) + Math.min(1.5, 0.5 * (it.it.repeat_ts || []).length), k: it.sec === 'stuck' ? 1 : 0 };
+      const c = it.tier === 2 ? it.c : b.latest, i = it.tier === 2 ? it.i : (c.must || []).findIndex(m => m.rule === it.x.rule), m = (c.must || [])[i];
+      if (it.tier === 1 ? it.x.base : isBaseWord(m)) return { s: 3, k: 2 };
+      const ev = m ? effRefs(c, i).map(r => refItem(c, r)).filter(([, x]) => x) : [];
+      const n = it.tier === 1 ? it.x.ng : +((m.badges || []).join(' ').match(/(\d+)[회回]/) || [])[1] || m.refs.length;
+      return { s: (ev.length ? Math.max(...ev.map(([sec, x]) => base(sec, x))) : 1.5) + Math.min(1.5, 0.5 * Math.max(0, n - 1))
+                 + (it.tier === 1 ? Math.max(0, it.x.run - 1) : 0), k: ev.some(([sec]) => sec === 'stuck') ? 1 : 0 };
+    };
+    const sc = new Map(q.map(it => [it, rank(it)]));
+    q.sort((a, z) => sc.get(z).s - sc.get(a).s || sc.get(z).k - sc.get(a).k);
   }
   return { ...b, q };
 }
@@ -2363,7 +2428,7 @@ function fixBatch(fq, skip = false) {
 }
 const qLabel = it => it.tier === 1 ? it.x.rule : it.tier === 2 ? it.m.rule
   : it.sec === 'fix' ? it.it.said : it.sec === 'stuck' ? it.it.wanted : it.it.jp_full;
-const qTag = it => it.tier === 1 ? '버릇' : it.tier === 2 ? `${shortDate(it.c.date)} 필수` : `${shortDate(it.c.date)} ${SEC_NAME[it.sec]}`;
+const qTag = it => it.tier === 1 ? (it.x.base ? L('기초 단어', '基礎単語') : L('버릇', 'くせ')) : it.tier === 2 ? `${shortDate(it.c.date)} ${L('필수', '最優先')}` : `${shortDate(it.c.date)} ${SEC_NAME[it.sec]}`;
 const qDoneN = fq => fq.q.filter(it => isDone('callsItem', it.id)).length;
 
 // 목록 화면의 입구 — 지금 묶음의 이름만. 설명은 학습 화면에서.
@@ -2372,14 +2437,32 @@ function fixEntryHtml() {
   if (!fq) return '';
   const batch = fixBatch(fq);
   const done = batch.filter(it => isDone('callsItem', it.id)).length;
+  const next = batch.findIndex(it => !isDone('callsItem', it.id));
+  const pg = fixPageK(fq) % fixPageCount(fq) + 1, pgN = fixPageCount(fq);
+  // 오른쪽 표시: 끝낸 건 ✓, 여러 통화 연속인 버릇은 🔴×연속 수(왜 지금 해야 하는지), 나머지는 출처 태그
+  const tag = it => isDone('callsItem', it.id) ? '✓' : it.tier === 1 && it.x.run >= 2
+    ? `${'🔴'.repeat(Math.min(it.x.run, 3))} ${L(`${it.x.run}통화 연속`, `${it.x.run}回連続`)}` : qTag(it);
+  const SHOW = 6;   // 히어로엔 6개까지만 — 다 보이면 목록이 화면 밖으로 밀린다. 나머지는 「+N개 더」
+  const go = !batch.length ? '' : next < 0 ? L(`🎉 이번 묶음 끝 · 다음 ${FIX_N}개 →`, `🎉 このセット完了 · 次の${FIX_N}個へ →`)
+    : done ? L(`${next + 1}번부터 이어서 학습 →`, `${next + 1}番から続ける →`) : L('학습 시작 →', '学習を始める →');
   return `
-    <aside class="fx-entry" data-go-fix>
-      <p class="fx-h">🔴 지금 고칠 것 <b>${batch.length}</b></p>
-      <p class="fx-sub">${batch.length && done === batch.length ? `🎉 이번 묶음 끝 · 다음 ${FIX_N}개는 학습 화면에서 열기` : `이번 묶음 ${done}/${batch.length}`} · 전체 ${fq.q.length}개 중 ${qDoneN(fq)}개 확인</p>
-      <ol class="fx-list">${batch.map(it => `<li${isDone('callsItem', it.id) ? ' class="ok"' : ''}><span class="jp">${ruby(qLabel(it) || '')}</span><em class="fx-tag">${esc(qTag(it))}</em></li>`).join('')}</ol>
-      <button class="fx-go">학습하러 가기 →</button>
-    </aside>`;
+    <section class="fx-entry" data-go-fix>
+      <div class="fx-hh"><h2 class="fx-h">${L('🔴 지금 고칠 것', '🔴 いま直すこと')}</h2><span class="fx-sub">${L(`모든 통화에서 반복된 실수 · ${pg}묶음 / ${pgN}`, `すべての通話のくり返しミス · ${pg}セット目 / ${pgN}`)}</span></div>
+      <div class="fx-bar"><i style="width:${batch.length ? Math.round(done / batch.length * 100) : 0}%"></i></div>
+      <p class="fx-bar-t">${L(`이번 묶음 ${done} / ${batch.length} · 전체 ${fq.q.length}개 중 ${qDoneN(fq)}개 확인`, `このセット ${done} / ${batch.length} · 全${fq.q.length}個中 ${qDoneN(fq)}個確認`)}</p>
+      <ol class="fx-list">${batch.map((it, k) => `<li class="${isDone('callsItem', it.id) ? 'ok' : ''}${k >= SHOW ? ' fx-more-i' : ''}"><span class="jp">${ruby(qLabel(it) || '')}</span><em class="fx-tag">${esc(tag(it))}</em></li>`).join('')}</ol>
+      ${batch.length > SHOW ? `<p class="fx-more">${L(`+ ${batch.length - SHOW}개 더`, `+ あと${batch.length - SHOW}個`)}</p>` : ''}
+      <button class="fx-go">${go}</button>
+    </section>`;
 }
+
+// 다음 묶음 버튼 글자 — 그릴 때와 ✓ 뒤 갱신 때 같은 글자여야 해서 한 곳에 둔다
+const skipLabel = all => all ? L(`다음 ${FIX_N}개 열기`, `次の${FIX_N}個へ`)
+  : L(`다 안 끝났지만 다음 ${FIX_N}개 보기 (남은 건 다음 바퀴에)`, `途中だけど次の${FIX_N}個を見る（残りは次の周で）`);
+// 밑줄 범례 — 필수 칸과 학습 화면이 같은 것을 쓴다
+const markLegend = () => `<p class="mark-legend">${L(
+  '<span class="dx">빨간 물결</span> 틀림 · <span class="dz">주황 점선</span> 어색함 · <span class="dins"></span> 빠진 자리 · <span class="do">초록</span> 고친 곳·맞게 쓴 곳',
+  '<span class="dx">赤い波線</span> 間違い · <span class="dz">オレンジ点線</span> 不自然 · <span class="dins"></span> 抜けたところ · <span class="do">緑</span> 直したところ・正しく言えたところ')}</p>`;
 
 // 학습 화면 #calls/fix
 function renderFixStudy(skip = false, pageOverride = null) {
@@ -2388,37 +2471,37 @@ function renderFixStudy(skip = false, pageOverride = null) {
   const batch = pageOverride == null ? fixBatch(fq, skip) : fixPageItems(fq, pageOverride);
   // ✗ 틀린 말 아래 줄에 ✓ 고친 말 — 오른쪽 화살표로 붙이면 눈이 옆으로 가서 읽기 어렵다(유저)
   const exLines = x => [
-    ...(x.ngEx.length ? [`<p class="ev-type">${x.firstEx ? '처음 틀렸던 말' : '고칠 말'} ${x.ngEx.length}${['bad', 'meh'].map(l => { const n = x.ngEx.filter(e => (e.lv || 'bad') === l).length; return n ? ` · ${LV[l][0]} ${LV[l][1]} ${n}` : ''; }).join('')}</p>`] : []),
+    ...(x.ngEx.length ? [`<p class="ev-type">${x.firstEx ? L('처음 틀렸던 말', '最初に間違えた文') : L('고칠 말', '直したい文')} ${x.ngEx.length}${['bad', 'meh'].map(l => { const n = x.ngEx.filter(e => (e.lv || 'bad') === l).length; return n ? ` · ${LV[l][0]} ${LV[l][1]} ${n}` : ''; }).join('')}</p>`] : []),
     // 맨 위에 「무슨 말을 하려던 건지」(한국어) — 일본어만으론 맥락을 모른다(유저)
     ...x.ngEx.map(e => exBox({ static: true, t: e.t, at: x.firstEx ? e.at : '', lv: e.lv || 'bad', lvTag: true, kr: e.kr, ...exNgParts(e), hideId: e.hideId })),
-    ...(x.okEx.length ? [`<p class="ev-type">맞게 쓴 말 ${x.okEx.length}</p>`] : []),
+    ...(x.okEx.length ? [`<p class="ev-type">${L('맞게 쓴 말', '正しく言えた文')} ${x.okEx.length}</p>`] : []),
     // 맞게 쓴 말: 문장 전체에 ✓를 달면 다른 어색한 곳까지 맞은 것처럼 보인다 → 맞은 부분만 초록, ✓는 그 부분에만
     ...x.okEx.map(e => { const [sent, fixed] = okPair(e.jp, e.hit, e.fixed); return exBox({ static: true, t: e.t, kr: e.kr, hideId: e.hideId,
       body: `<p class="ev-s"><span>${sent}</span></p>`,
-      after: (e.hit ? `<p class="ev-okline"><b>✓</b>${e.vs ? `「${esc(e.vs)}」 대신 ` : ''}「${esc(e.hit)}」 — 여기를 맞게 썼다</p>` : '')
-        + (fixed ? `<p class="ev-also">다른 곳도 다듬으면 <span>(이 규칙과는 상관없는 곳)</span></p>${evPair('ev-o', '✓', fixed)}`
-          + ((e.why || []).length ? `<ul class="ev-why">${e.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : '') : '') }); }),
+      after: (e.hit ? `<p class="ev-okline"><b>✓</b>${e.vs ? L(`「${esc(e.vs)}」 대신 `, `「${esc(e.vs)}」ではなく`) : ''}「${esc(e.hit)}」${L(' — 여기를 맞게 썼다', ' — ここが正しく言えた')}</p>` : '')
+        + (fixed ? `<p class="ev-also">${L('다른 곳도 다듬으면 <span>(이 규칙과는 상관없는 곳)</span>', 'ほかの所も整えると <span>（このルールとは関係ない所）</span>')}</p>${evPair('ev-o', '✓', fixed)}`
+          + ((e.why || []).length ? `<ul class="ev-why">${e.why.map(w => `<li>${nat(w)}</li>`).join('')}</ul>` : '') : '') }); }),
     hiddenNote(x.hidden || [])].join('');
   const callBtns = x => [...new Set(x.links.map(l => l.split(':')[0]))].sort().map(cid =>
-    `<button class="fb-go" data-go-call="${esc(cid)}">${shortDate(cid)} 노트</button>`).join('');
+    `<button class="fb-go" data-go-call="${esc(cid)}">${shortDate(cid)} ${L('노트', 'ノート')}</button>`).join('');
   const habit = (x, k) => `
     <div class="rule fx${isDone('callsItem', x.id) ? ' done' : ''}" data-fx-id="${esc(x.id)}" data-links="${esc(x.links.join(','))}">
       <div class="rule-top"><span class="rno">${k + 1}</span>
         <div class="rule-main"><p class="rule-t jp">${ruby(x.rule)}</p>
           <div class="badges">${fxBadge(x)}</div>
-          <div class="rule-toggle"><span class="arr">▸</span><span class="t-open">자세히 보기</span><span class="t-close">접기</span></div></div>
+          <div class="rule-toggle"><span class="arr">▸</span><span class="t-open">${L('자세히 보기', 'くわしく見る')}</span><span class="t-close">${L('접기', '閉じる')}</span></div></div>
         <span class="rule-tools">${(l => l ? starBtn(`${l.split(':')[0]}:must:${l.split(':')[1]}`) : '')([...x.links].sort().pop())}${checkBtn('callsItem', x.id)}</span></div>
       <div class="rule-body">
-        ${x.why ? `<p class="rule-why">${esc(x.why)}</p>` : ''}
-        ${x.note ? `<p class="fx-note">${esc(x.note)}</p>` : ''}
-        ${x.ngEx.length || x.okEx.length ? `<div class="ev-group fx-ex"><p class="ev-group-h">내가 한 말</p>${exLines(x)}</div>` : hiddenNote(x.hidden || [])}
-        ${x.try ? `<p class="ci-try fx-try"><b>다음 통화에서 써보기</b><span class="jp">${ruby(x.try)}</span></p>` : ''}
-        <div class="fx-calls"><span>이 규칙이 나온 통화</span>${callBtns(x)}</div>
+        ${x.why ? `<p class="rule-why">${nat(x.why)}</p>` : ''}
+        ${x.note ? `<p class="fx-note">${nat(x.note)}</p>` : ''}
+        ${x.ngEx.length || x.okEx.length ? `<div class="ev-group fx-ex"><p class="ev-group-h">${L('내가 한 말', '自分が言った文')}</p>${exLines(x)}</div>` : hiddenNote(x.hidden || [])}
+        ${x.try ? `<p class="ci-try fx-try"><b>${L('다음 통화에서 써보기', '次の通話で使ってみる')}</b><span class="jp">${ruby(x.try)}</span></p>` : ''}
+        <div class="fx-calls"><span>${L('이 규칙이 나온 통화', 'このルールが出た通話')}</span>${callBtns(x)}</div>
       </div>
     </div>`;
   const item = (it, k) => `
     <div class="fq-item" data-call-id="${esc(it.c ? it.c.id : '')}">
-      <p class="fq-tag t${it.tier}">${esc(qTag(it))}${it.c ? ` <button class="fq-open" data-go-call="${esc(it.c.id)}">노트 →</button>` : ''}</p>
+      <p class="fq-tag t${it.tier}">${esc(qTag(it))}${it.c ? ` <button class="fq-open" data-go-call="${esc(it.c.id)}">${L('노트 →', 'ノート →')}</button>` : ''}</p>
       ${it.tier === 1 ? habit(it.x, k) : it.tier === 2 ? mustRule(it.c, it.m, it.i, { pos: k }) : detailCard(it, k)}
     </div>`;
   // 3단 세부 카드: 원래 노트 카드는 칸 안에서 보던 거라 제목이 없고 한국어가 맨 아래였다(유저: 뭐가 포인트인지 모른다).
@@ -2427,27 +2510,27 @@ function renderFixStudy(skip = false, pageOverride = null) {
   const detailCard = (it, k) => {
     const { c, sec, it: d, id } = it;
     const title = sec === 'fix' ? (([x, y]) => `${x} → ${y}`)(diffPair(d.said, d.natural))
-      : sec === 'stuck' ? (keyTitle(d.key) || ruby(d.natural_full || '')) : (keyTitle(d.key) || '못 알아들은 말');
-    const badges = [sec === 'fix' && d.cat ? `<span class="bd g">${esc(d.cat)}</span>` : '',
-      sec === 'stuck' && d.signal ? `<span class="bd g">${esc(d.signal)}</span>` : '',
-      sec === 'missed' && d.cause ? `<span class="bd g">${esc(d.cause)}</span>` : '',
-      (d.repeat_ts || []).length ? `<span class="bd">이번 통화 ${(d.repeat_ts || []).length + 1}번</span>` : ''].join('');
+      : sec === 'stuck' ? (keyTitle(d.key) || ruby(d.natural_full || '')) : (keyTitle(d.key) || L('못 알아들은 말', '聞き取れなかった言葉'));
+    const badges = [sec === 'fix' && d.cat ? `<span class="bd g">${nat(d.cat)}</span>` : '',
+      sec === 'stuck' && d.signal ? `<span class="bd g">${nat(d.signal)}</span>` : '',
+      sec === 'missed' && d.cause ? `<span class="bd g">${nat(d.cause)}</span>` : '',
+      (d.repeat_ts || []).length ? `<span class="bd">${L(`이번 통화 ${(d.repeat_ts || []).length + 1}번`, `今回の通話で${(d.repeat_ts || []).length + 1}回`)}</span>` : ''].join('');
     const box = sec === 'fix'
       ? exBox({ static: true, t: d.t, kr: d.kr, lv: fixLv(d), lvTag: true, wrong: d.parts && d.parts.length ? partsMarked(d.said_full || d.said, d.parts) : ruby(d.said_full || d.said || ''), right: ruby(d.natural_full || d.natural || '') })
       : sec === 'stuck'
-        ? exBox({ static: true, t: d.t, kr: d.wanted, krLabel: '하려던 말', lv: fixLv(d), lvTag: true, wrong: d.parts && d.parts.length ? partsMarked(d.said_full || '', d.parts) : ruby(d.said_full || ''), right: ruby(d.natural_full || '') })
+        ? exBox({ static: true, t: d.t, kr: d.wanted, krLabel: L('하려던 말', '言いたかったこと'), lv: fixLv(d), lvTag: true, wrong: d.parts && d.parts.length ? partsMarked(d.said_full || '', d.parts) : ruby(d.said_full || ''), right: ruby(d.natural_full || '') })
         : exBox({ static: true, t: d.t, kr: d.kr, right: `<span${d.clipKey ? ` data-clip="${esc(d.clipKey)}"` : ''}>${ruby(d.jp_full || '')}</span>`, rightMark: '👂',
-            tools: d.clipKey ? `<button class="clip-btn" data-clip="${esc(d.clipKey)}" disabled>▶ 듣기</button>` : '' });
+            tools: d.clipKey ? `<button class="clip-btn" data-clip="${esc(d.clipKey)}" disabled>${L('▶ 듣기', '▶ 聞く')}</button>` : '' });
     const why = sec === 'fix' ? d.why : sec === 'missed' ? d.how : '';
     return `
     <div class="rule fx3${isDone('callsItem', id) ? ' done' : ''}" data-card-id="${esc(id)}">
       <div class="rule-top"><span class="rno">${k + 1}</span>
         <div class="rule-main"><p class="rule-t jp">${title}</p>
           <div class="badges">${badges}</div>
-          <div class="rule-toggle"><span class="arr">▸</span><span class="t-open">자세히 보기</span><span class="t-close">접기</span></div></div>
+          <div class="rule-toggle"><span class="arr">▸</span><span class="t-open">${L('자세히 보기', 'くわしく見る')}</span><span class="t-close">${L('접기', '閉じる')}</span></div></div>
         <span class="rule-tools">${starBtn(id)}${checkBtn('callsItem', id)}</span></div>
       <div class="rule-body">
-        ${why ? `<p class="rule-why">${esc(why)}</p>` : ''}
+        ${why ? `<p class="rule-why">${nat(why)}</p>` : ''}
         <div class="ev-group">${box}${sec !== 'fix' && (d.key || []).length ? keysHtml(d.key) : ''}</div>
       </div>
     </div>`;
@@ -2456,29 +2539,30 @@ function renderFixStudy(skip = false, pageOverride = null) {
     <div class="fb-fold"><p class="fb-fold-h">${title} <b>${list.length}</b><span class="arr">▸</span></p><div class="fb-fold-b">${body}</div></div>` : '';
   const bDone = () => batch.filter(it => isDone('callsItem', it.id)).length;
   app.innerHTML = `
-    <button class="back">← 회화 목록</button>
+    <button class="back">${L('← 회화 목록', '← 会話リスト')}</button>
     <div class="detail fixstudy">
-      <h2>🔴 지금 고칠 것</h2>
-      <div class="meta"><span>${shortDate(fq.latest.date)} 통화까지 · 통화 ${CALLS.length}개 기준</span></div>
-      <p class="hint">반복된 버릇 → 각 통화 필수 → 통화 세부 순서로 줄을 세워 <b>${FIX_N}개씩</b> 보여준다. 이번 묶음을 다 ✓하면 다음 ${FIX_N}개가 나온다.
-        새 통화 노트가 들어오면 다시 버릇부터. 필수·세부 카드의 ✓는 그 통화 노트에도 똑같이 남는다.</p>
-      <div class="must-prog"><span><i style="width:${batch.length ? bDone() / batch.length * 100 : 0}%"></i></span><em class="fx-cnt">이번 묶음 ${bDone()} / ${batch.length}</em></div>
-      <p class="mark-legend"><span class="dx">빨간 물결</span> 틀림 · <span class="dz">주황 점선</span> 어색함 · <span class="dins"></span> 빠진 자리 · <span class="do">초록</span> 고친 곳·맞게 쓴 곳</p>
-      <p class="fq-all">${fixPageK(fq) % fixPageCount(fq) + 1}번째 묶음 (전체 ${fixPageCount(fq)}묶음) · 전체 고칠 것 ${fq.q.length}개 중 <b class="fq-alln">${qDoneN(fq)}</b>개 확인 · 맥·폰 같은 묶음</p>
+      <h2>${L('🔴 지금 고칠 것', '🔴 いま直すこと')}</h2>
+      <div class="meta"><span>${L(`${shortDate(fq.latest.date)} 통화까지 · 통화 ${CALLS.length}개 기준`, `${shortDate(fq.latest.date)}の通話まで · 通話${CALLS.length}件から`)}</span></div>
+      <p class="hint">${L(`반복된 버릇 → 각 통화 필수 → 통화 세부 순서로 줄을 세워 <b>${FIX_N}개씩</b> 보여준다. 이번 묶음을 다 ✓하면 다음 ${FIX_N}개가 나온다.
+        새 통화 노트가 들어오면 다시 버릇부터. 필수·세부 카드의 ✓는 그 통화 노트에도 똑같이 남는다.`, `くり返すくせ → 各通話の最優先 → 通話の細かいカードの順に並べて、<b>${FIX_N}個ずつ</b>出します。このセットを全部 ✓ すると次の${FIX_N}個が出ます。
+        新しい通話ノートが入ると、またくせから。最優先・細かいカードの ✓ は、その通話ノートにも同じく残ります。`)}</p>
+      <div class="must-prog"><span><i style="width:${batch.length ? bDone() / batch.length * 100 : 0}%"></i></span><em class="fx-cnt">${L('이번 묶음', 'このセット')} ${bDone()} / ${batch.length}</em></div>
+      ${markLegend()}
+      <p class="fq-all">${L(`${fixPageK(fq) % fixPageCount(fq) + 1}번째 묶음 (전체 ${fixPageCount(fq)}묶음) · 전체 고칠 것 ${fq.q.length}개 중 <b class="fq-alln">${qDoneN(fq)}</b>개 확인 · 맥·폰 같은 묶음`, `${fixPageK(fq) % fixPageCount(fq) + 1}セット目（全${fixPageCount(fq)}セット）· 直すこと全${fq.q.length}個中 <b class="fq-alln">${qDoneN(fq)}</b>個確認 · PC・スマホで同じセット`)}</p>
       <div class="fq-done" ${batch.length && bDone() === batch.length ? '' : 'hidden'}>
-        <b>🎉 이번 ${batch.length}개 끝!</b><small>오늘은 여기까지 해도 충분해. 더 하고 싶으면 다음 ${FIX_N}개를 열어.</small>
-        <button class="fq-next">다음 ${FIX_N}개 열기</button></div>
-      ${batch.length ? batch.map(item).join('') : '<p class="empty">고칠 것을 전부 확인했다 🎉 새 통화 노트가 들어오면 다시 채워진다.</p>'}
-      ${batch.length ? `<button class="fq-skip">${bDone() === batch.length ? `다음 ${FIX_N}개 열기` : `다 안 끝났지만 다음 ${FIX_N}개 보기 (남은 건 다음 바퀴에)`}</button>` : ''}
-      ${fold('🎓 졸업', fq.grad, fq.grad.map(x => `
-        <p class="fb-sub"><span class="jp">${ruby(x.rule)}</span><span class="fb-try">${shortDate(x.at)} 통화에서 맞게 씀${x.ok_ex && x.ok_ex[0] ? ` · <span class="jp">${ruby(x.ok_ex[0].jp)}</span>` : ''}${(x.hidden || []).length ? ' · 예문을 빼서 졸업' : ''}</span>${hiddenNote(x.hidden || [])}</p>`).join(''))}
-      ${(ids => ids.length ? `<p class="hid-all">이 화면에서 뺀 예문 전체 ${ids.length}개 <button class="unhide" data-unhide="${esc(ids.join(','))}">전부 되돌리기</button>
-        <button class="hid-copy">다음 판정에 넘기기(복사)</button><small>다음 통화 노트를 만들 때 이 목록을 붙여 넣으면 같은 예문을 다시 넣지 않는다</small></p>` : '')(
+        <b>${L(`🎉 이번 ${batch.length}개 끝!`, `🎉 この${batch.length}個、完了！`)}</b><small>${L(`오늘은 여기까지 해도 충분해. 더 하고 싶으면 다음 ${FIX_N}개를 열어.`, `今日はここまでで十分。もっとやりたいときは次の${FIX_N}個へ。`)}</small>
+        <button class="fq-next">${L(`다음 ${FIX_N}개 열기`, `次の${FIX_N}個へ`)}</button></div>
+      ${batch.length ? batch.map(item).join('') : `<p class="empty">${L('고칠 것을 전부 확인했다 🎉 새 통화 노트가 들어오면 다시 채워진다.', '直すことを全部確認しました 🎉 新しい通話ノートが入ると、また追加されます。')}</p>`}
+      ${batch.length ? `<button class="fq-skip">${skipLabel(bDone() === batch.length)}</button>` : ''}
+      ${fold(L('🎓 졸업', '🎓 卒業'), fq.grad, fq.grad.map(x => `
+        <p class="fb-sub"><span class="jp">${ruby(x.rule)}</span><span class="fb-try">${shortDate(x.at)}${L(' 통화에서 맞게 씀', 'の通話で正しく言えた')}${x.ok_ex && x.ok_ex[0] ? ` · <span class="jp">${ruby(x.ok_ex[0].jp)}</span>` : ''}${(x.hidden || []).length ? L(' · 예문을 빼서 졸업', ' · 例文を外して卒業') : ''}</span>${hiddenNote(x.hidden || [])}</p>`).join(''))}
+      ${(ids => ids.length ? `<p class="hid-all">${L(`이 화면에서 뺀 예문 전체 ${ids.length}개`, `この画面で外した例文 ${ids.length}個`)} <button class="unhide" data-unhide="${esc(ids.join(','))}">${L('전부 되돌리기', '全部もとに戻す')}</button>
+        <button class="hid-copy">${L('다음 판정에 넘기기(복사)', '次のノート用にコピー')}</button><small>${L('다음 통화 노트를 만들 때 이 목록을 붙여 넣으면 같은 예문을 다시 넣지 않는다', 'コピーしてノートを作る人に送ると、次のノートで同じ例文を使いません')}</small></p>` : '')(
         Object.keys(doneOf('callsItem')).filter(k => k.startsWith('hide:') && isDone('callsItem', k)))}
     </div>`;
   app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
   const progress = () => {
-    app.querySelector('.fx-cnt').textContent = `이번 묶음 ${bDone()} / ${batch.length}`;
+    app.querySelector('.fx-cnt').textContent = `${L('이번 묶음', 'このセット')} ${bDone()} / ${batch.length}`;
     app.querySelector('.must-prog i').style.width = (batch.length ? bDone() / batch.length * 100 : 0) + '%';
     app.querySelector('.fq-alln').textContent = qDoneN(fq);
     app.querySelectorAll('.rule').forEach(r => { const id = r.dataset.ruleId || r.dataset.cardId; if (id) r.classList.toggle('done', isDone('callsItem', id)); });
@@ -2486,10 +2570,10 @@ function renderFixStudy(skip = false, pageOverride = null) {
     // 다 끝나도 자동으로 넘어가지 않는다 — 축하 칸을 보여주고 버튼을 기다린다
     const all = batch.length && bDone() === batch.length;
     const fin = app.querySelector('.fq-done');
-    if (all && fin.hidden) { fin.hidden = false; toast(`🎉 이번 ${batch.length}개 끝!`); scrollTo({ top: 0, behavior: 'smooth' }); }
+    if (all && fin.hidden) { fin.hidden = false; toast(L(`🎉 이번 ${batch.length}개 끝!`, `🎉 この${batch.length}個、完了！`)); scrollTo({ top: 0, behavior: 'smooth' }); }
     if (!all) fin.hidden = true;
     const sk = app.querySelector('.fq-skip');
-    if (sk) sk.textContent = all ? `다음 ${FIX_N}개 열기` : `다 안 끝났지만 다음 ${FIX_N}개 보기 (남은 건 다음 바퀴에)`;
+    if (sk) sk.textContent = skipLabel(all);
   };
   wireChecks(app, progress);
   wireStars(app, () => {});
@@ -2524,8 +2608,8 @@ function renderFixStudy(skip = false, pageOverride = null) {
   });
   app.querySelector('.hid-copy')?.addEventListener('click', async () => {
     const txt = hiddenReport();
-    try { await navigator.clipboard.writeText(txt); toast('복사했다 — 다음 노트 만들 때 붙여 넣기'); }
-    catch { prompt('아래 글을 복사해서 다음 노트 만들 때 붙여 넣기', txt); }
+    try { await navigator.clipboard.writeText(txt); toast(L('복사했다 — 다음 노트 만들 때 붙여 넣기', 'コピーしました — ノートを作る人に送ってください')); }
+    catch { prompt(L('아래 글을 복사해서 다음 노트 만들 때 붙여 넣기', '下の文をコピーして、ノートを作る人に送ってください'), txt); }
   });
   app.querySelectorAll('.fq-skip, .fq-next').forEach(b => b.addEventListener('click', () => { renderFixStudy(true); scrollTo(0, 0); }));
   app.querySelector('.fixstudy').addEventListener('click', e => {
@@ -2545,7 +2629,7 @@ function renderFixStudy(skip = false, pageOverride = null) {
 }
 
 // 「9월 19일 (토)」 — 목록에서 날짜가 먼저 눈에 들어오게(유저: 대화 목록처럼 안 보이고 날짜가 안 보인다)
-function callDay(d) { const t = new Date(d + 'T00:00:00'); return isNaN(t) ? d : `${t.getMonth() + 1}월 ${t.getDate()}일 (${'일월화수목금토'[t.getDay()]})`; }
+function callDay(d) { const t = new Date(d + 'T00:00:00'); return isNaN(t) ? d : L(`${t.getMonth() + 1}월 ${t.getDate()}일 (${'일월화수목금토'[t.getDay()]})`, `${t.getMonth() + 1}月${t.getDate()}日 (${'日月火水木金土'[t.getDay()]})`); }
 // 대화 상대별 칩. 이름은 노트 JSON 의 partner(나만 보는 목록이라 실명 OK — 공개본은 잠금본 안에만 있다).
 // 「지금 고칠 것」은 상대와 상관없이 전체 통화 기준이다(버릇은 상대가 바뀌어도 나온다).
 const PARTNER_KEY = 'callsPartner';
@@ -2555,21 +2639,18 @@ function renderCallsList() {
   let who = localStorage.getItem(PARTNER_KEY) || '';
   if (who && !names.includes(who)) who = '';
   const shown = who ? CALLS.filter(c => c.partner === who) : CALLS;
-  app.innerHTML = `<div class="calls-wrap"><div class="calls-main">
-    <p class="list-h">💬 대화 목록 <small>${shown.length}개 · 최근 통화가 위</small></p>
-    ${names.length > 1 ? `<div class="pchips">${[['', '전체', CALLS.length], ...names.map(n => [n, n, CALLS.filter(c => c.partner === n).length])]
+  app.innerHTML = `<div class="calls-wrap">${fixEntryHtml()}${starN ? `<button class="starall side" data-go-star>${L('⭐ 회화 노트 별표', '⭐ ★したカード')} <b>${starN}</b><small>${L('⭐ 모아보기에서 보기', '「まとめて見る」で見る')}</small></button>` : ''}<div class="calls-main">
+    <p class="list-h">${L('💬 통화 노트', '💬 通話ノート')} <small>${L(`${shown.length}개 · 최근 통화가 위`, `${shown.length}件 · 新しい順`)}</small></p>
+    ${names.length > 1 ? `<div class="pchips">${[['', L('전체', 'すべて'), CALLS.length], ...names.map(n => [n, n, CALLS.filter(c => c.partner === n).length])]
       .map(([k, l, n]) => `<button data-partner="${esc(k)}" class="${k === who ? 'on' : ''}">${esc(l)} <b>${n}</b></button>`).join('')}</div>` : ''}` +
     (shown.length ? '<div class="grid">' + shown.map(c => `
-    <div class="item plain${isDone('calls', c.id) ? ' done' : ''}" data-id="${esc(c.id)}">
-      <div>
-        <div class="rowtop"><span class="call-day">${esc(callDay(c.date))}</span>${c.partner ? `<span class="call-who">${esc(c.partner)}</span>` : ''}${checkBtn('calls', c.id)}</div>
-        <h2>${esc(c.title.replace(/^전화 수다:\s*/, ''))}</h2>
-        <div class="meta"><span>${esc(c.duration)}</span><span>${esc(c.partner ? (c.with || '').replace(/^일본인 친구\s*·\s*/, '') : (c.with || ''))}</span></div>
-        <p>고칠 표현 ${c.fixes.length}${c.stuck ? ` · 막힌 순간 ${c.stuck.length}` : ''}${c.missed ? ` · 못 알아들은 순간 ${c.missed.length}` : ''} · 가져다 쓸 표현 ${c.steal.length} · 새 단어 ${c.vocab.length}${callStars(c).length ? ` · ⭐ ${callStars(c).length}` : ''}</p>
-      </div>
+    <div class="item plain call-line${isDone('calls', c.id) ? ' done' : ''}" data-id="${esc(c.id)}">
+      <span class="call-day">${esc(shortDate(c.date))}</span>${c.partner ? `<span class="call-who">${esc(c.partner)}</span>` : ''}
+      <h2>${nat(c.title.replace(/^전화 수다:\s*/, ''))}</h2>
+      <span class="dur">${nat(c.duration)}</span>${checkBtn('calls', c.id)}
     </div>`).join('') + '</div>'
-    : '<p class="empty">아직 회화 노트 없음.</p>') + `</div>
-    <div class="calls-side">${fixEntryHtml()}${starN ? `<button class="starall side" data-go-star>⭐ 회화 노트 별표 <b>${starN}</b><small>⭐ 모아보기에서 보기</small></button>` : ''}</div></div>`;
+    : `<p class="empty">${L('아직 회화 노트 없음.', 'まだ会話ノートがありません。')}</p>`) + `</div>
+    </div>`;
   app.querySelectorAll('.item').forEach(el => el.onclick = () => { location.hash = 'calls/' + el.dataset.id; });
   const fx = app.querySelector('[data-go-fix]');
   if (fx) fx.onclick = () => { location.hash = 'calls/fix'; };
@@ -2585,17 +2666,18 @@ function renderCallsList() {
 const PART_ICON = { ok: '✅', meh: '🔸', bad: '❌' };   // 맞음 · 뜻은 통하지만 어색 · 틀림(뜻이 바뀌거나 문법 오류)
 // ✏️·🧱 카드: 실제로 한 말을 조각마다 판정한 목록. 맞은 조각도 보여 줘야 "어디까지 맞았는지"가 보인다.
 const partsList = parts => parts && parts.length ? `
-          <p class="lbl">어디가 맞고 어디가 틀렸나</p>
-          <ul class="parts">${parts.map(p => `<li class="p-${esc(p.v)}"><span class="pv">${PART_ICON[p.v] || ''}</span><span class="jp">${ruby(p.jp)}</span><span class="pw">${esc(p.why)}</span></li>`).join('')}</ul>` : '';
+          <p class="lbl">${L('어디가 맞고 어디가 틀렸나', 'どこが合っていて、どこが違う？')}</p>
+          <ul class="parts">${parts.map(p => `<li class="p-${esc(p.v)}"><span class="pv">${PART_ICON[p.v] || ''}</span><span class="jp">${ruby(p.jp)}</span><span class="pw">${nat(p.why)}</span></li>`).join('')}</ul>` : '';
 
 // ---- 회화 노트 카드 ----
 // 카드 id = `${통화id}:${칸}:${원래 배열 순번}`. 화면은 시각순으로 정렬해 그리지만 데이터 파일의 순서는
 // 그대로라 순번이 흔들리지 않는다. ✓(callsItem)와 ★(callsStar)는 같은 id 로 완료 저장소에 들어가서
 // 기기 간 동기화도 기존 완료 표시와 같이 된다.
 const CALL_SECS = [   // [칸, 데이터 키, 제목]
-  ['fix', 'fixes', '✏️ 고칠 표현'], ['stuck', 'stuck', '🧱 막힌 순간'], ['missed', 'missed', '👂 못 알아들은 순간'],
-  ['steal', 'steal', '📥 가져다 쓸 표현'], ['good', 'good', '👍 잘한 점'], ['vocab', 'vocab', '📖 새 단어'],
+  ['fix', 'fixes', L('✏️ 고칠 표현', '✏️ 直したい表現')], ['stuck', 'stuck', L('🧱 막힌 순간', '🧱 言えなかったこと')], ['missed', 'missed', L('👂 못 알아들은 순간', '👂 聞き取れなかったこと')],
+  ['steal', 'steal', L('📥 가져다 쓸 표현', '📥 まねしたい表現')], ['good', 'good', L('👍 잘한 점', '👍 よかったところ')], ['vocab', 'vocab', L('📖 새 단어', '📖 新しい単語')],
 ];
+const SEC_TITLE = Object.fromEntries(CALL_SECS.map(([s, , t]) => [s, t]));   // 칸 제목(이모지 포함) — 칩·제목이 같은 글자를 쓰게
 const callArr = (c, sec) => c[CALL_SECS.find(([s]) => s === sec)[1]] || [];
 const callItemId = (c, sec, it) => `${c.id}:${sec}:${callArr(c, sec).indexOf(it)}`;
 const isStar = id => isDone('callsStar', id);
@@ -2603,75 +2685,75 @@ const starredRules = c => (c.must || []).map((m, i) => [m, i]).filter(([, i]) =>
 const callStars = c => [...starredRules(c).map(([m]) => m), ...CALL_SECS.flatMap(([sec]) => callArr(c, sec).filter(it => isStar(callItemId(c, sec, it))))];
 const callStarTotal = () => (CALLS || []).reduce((n, c) => n + callStars(c).length, 0);
 const byT = (a, b) => ((a.t || '') < (b.t || '') ? -1 : 1);
-const FILT = [['todo', '안 한 것'], ['done', '확인한 것'], ['all', '전체']];
+const FILT = [['todo', L('안 한 것', 'まだ')], ['done', L('확인한 것', '確認済み')], ['all', L('전체', 'すべて')]];
 
-const starBtn = id => `<button class="star${isStar(id) ? ' on' : ''}" data-star-id="${esc(id)}" title="별표 — ⭐ 칸에 모인다">★</button>`;
+const starBtn = id => `<button class="star${isStar(id) ? ' on' : ''}" data-star-id="${esc(id)}" title="${L('별표 — ⭐ 칸에 모인다', '★ — 「見返す」に集まります')}">★</button>`;
 const cardTools = (c, sec, it) => { const id = callItemId(c, sec, it); return `<span class="tools">${starBtn(id)}${checkBtn('callsItem', id)}</span>`; };
 const cardCls = (c, sec, it) => (isDone('callsItem', callItemId(c, sec, it)) ? ' done' : '');
 const keysHtml = ks => ks && ks.length
-  ? `<div class="keys">${ks.map(k => `<span class="key"><b class="jp">${ruby(k.jp)}</b> ${esc(k.kr || '')}</span>`).join('')}</div>` : '';
+  ? `<div class="keys">${ks.map(k => `<span class="key"><b class="jp">${ruby(k.jp)}</b> ${nat(k.kr || '')}</span>`).join('')}</div>` : '';
 
 const CARD = {
   fix: (c, f) => `
         <div class="fix${cardCls(c, 'fix', f)}">
-          <div class="fix-top"><span class="tsx">${esc(f.t)}</span><span class="tag">${esc(f.cat)}</span>
-            ${f.repeat_ts && f.repeat_ts.length ? `<span class="tag rep">★ ${f.repeat_ts.length + 1}번 · ${f.repeat_ts.map(esc).join(', ')}</span>` : ''}
+          <div class="fix-top"><span class="tsx">${esc(f.t)}</span><span class="tag">${nat(f.cat)}</span>
+            ${f.repeat_ts && f.repeat_ts.length ? `<span class="tag rep">★ ${f.repeat_ts.length + 1}${L('번', '回')} · ${f.repeat_ts.map(esc).join(', ')}</span>` : ''}
             ${cardTools(c, 'fix', f)}</div>
-          ${f.ctx ? `<p class="ctx">상대: ${f.ctx.clipKey ? `<button class="clip-btn" data-clip="${esc(f.ctx.clipKey)}" disabled>▶</button>` : ''}<span class="jp"${f.ctx.clipKey ? ` data-clip="${esc(f.ctx.clipKey)}"` : ''}>${ruby(f.ctx.jp)}</span><span class="ctx-kr">${esc(f.ctx.kr || '')}</span></p>` : ''}
-          <p class="lbl">내가 한 말</p>
+          ${f.ctx ? `<p class="ctx">${L('상대: ', '相手: ')}${f.ctx.clipKey ? `<button class="clip-btn" data-clip="${esc(f.ctx.clipKey)}" disabled>▶</button>` : ''}<span class="jp"${f.ctx.clipKey ? ` data-clip="${esc(f.ctx.clipKey)}"` : ''}>${ruby(f.ctx.jp)}</span><span class="ctx-kr">${nat(f.ctx.kr || '')}</span></p>` : ''}
+          <p class="lbl">${L('내가 한 말', '自分が言ったこと')}</p>
           <p class="jp said-full peek">${hl(f.said_full || f.said, f.said, 'bad')}</p>
           ${partsList(f.parts)}
-          <p class="lbl">자연스럽게</p>
+          <p class="lbl">${L('자연스럽게', '自然な言い方')}</p>
           <p class="jp nat">${hl(f.natural_full || f.natural, f.natural, 'good')}</p>
-          ${f.kr ? `<p class="kr">${esc(f.kr)}</p>` : ''}
-          <p class="why">${esc(f.why)}</p>
+          ${f.kr ? `<p class="kr">${nat(f.kr)}</p>` : ''}
+          <p class="why">${nat(f.why)}</p>
         </div>`,
   stuck: (c, s) => `
         <div class="fix${cardCls(c, 'stuck', s)}">
-          <div class="fix-top"><span class="tsx">${esc(s.t)}</span><span class="tag">${esc(s.signal || '')}</span>
+          <div class="fix-top"><span class="tsx">${esc(s.t)}</span><span class="tag">${nat(s.signal || '')}</span>
             ${cardTools(c, 'stuck', s)}</div>
-          ${s.ctx ? `<p class="ctx">상대: <span class="jp">${ruby(s.ctx.jp)}</span><span class="ctx-kr">${esc(s.ctx.kr || '')}</span></p>` : ''}
-          <p class="lbl">하려던 말</p>
-          <p class="wanted">${esc(s.wanted || '')}</p>
-          <p class="lbl">실제로 한 말</p>
+          ${s.ctx ? `<p class="ctx">${L('상대: ', '相手: ')}<span class="jp">${ruby(s.ctx.jp)}</span><span class="ctx-kr">${nat(s.ctx.kr || '')}</span></p>` : ''}
+          <p class="lbl">${L('하려던 말', '言いたかったこと')}</p>
+          <p class="wanted">${nat(s.wanted || '')}</p>
+          <p class="lbl">${L('실제로 한 말', '実際に言ったこと')}</p>
           <p class="jp said-full peek">${ruby(s.said_full || '')}</p>
           ${partsList(s.parts)}
-          <p class="lbl">이렇게 말하면 됨</p>
+          <p class="lbl">${L('이렇게 말하면 됨', 'こう言えばOK')}</p>
           <p class="jp nat">${ruby(s.natural_full || '')}</p>
-          ${s.kr ? `<p class="kr">${esc(s.kr)}</p>` : ''}
+          ${s.kr ? `<p class="kr">${nat(s.kr)}</p>` : ''}
           ${keysHtml(s.key)}
         </div>`,
   missed: (c, m) => `
         <div class="fix${cardCls(c, 'missed', m)}">
-          <div class="fix-top"><span class="tsx">${esc(m.t)}</span><span class="tag">${esc(m.cause || '')}</span>
-            ${m.clipKey ? `<button class="clip-btn" data-clip="${esc(m.clipKey)}" disabled>▶ 듣기</button>` : ''}
+          <div class="fix-top"><span class="tsx">${esc(m.t)}</span><span class="tag">${nat(m.cause || '')}</span>
+            ${m.clipKey ? `<button class="clip-btn" data-clip="${esc(m.clipKey)}" disabled>${L('▶ 듣기', '▶ 聞く')}</button>` : ''}
             ${cardTools(c, 'missed', m)}</div>
           <p class="jp nat peek"${m.clipKey ? ` data-clip="${esc(m.clipKey)}"` : ''}>${ruby(m.jp_full || '')}</p>
-          <p class="kr">${esc(m.kr || '')}</p>
+          <p class="kr">${nat(m.kr || '')}</p>
           ${keysHtml(m.key)}
-          ${m.how ? `<p class="why">${esc(m.how)}</p>` : ''}
+          ${m.how ? `<p class="why">${nat(m.how)}</p>` : ''}
         </div>`,
   steal: (c, s) => `
         <div class="fix${cardCls(c, 'steal', s)}">
           <div class="fix-top"><span class="tsx">${esc(s.t)}</span>
-            ${s.clipKey ? `<button class="clip-btn" data-clip="${esc(s.clipKey)}" disabled>▶ 듣기</button>` : ''}
+            ${s.clipKey ? `<button class="clip-btn" data-clip="${esc(s.clipKey)}" disabled>${L('▶ 듣기', '▶ 聞く')}</button>` : ''}
             ${cardTools(c, 'steal', s)}</div>
           <p class="jp nat peek"${s.clipKey ? ` data-clip="${esc(s.clipKey)}"` : ''}>${hl(s.jp_full || s.jp, s.jp, 'good')}</p>
-          <p class="kr">${esc(s.kr)}</p>
-          ${s.note ? `<p class="why">${esc(s.note)}</p>` : ''}
+          <p class="kr">${nat(s.kr)}</p>
+          ${s.note ? `<p class="why">${nat(s.note)}</p>` : ''}
         </div>`,
   good: (c, g) => `
         <div class="fix${cardCls(c, 'good', g)}">
           <div class="fix-top"><span class="tsx">${esc(g.t)}</span>${cardTools(c, 'good', g)}</div>
           <p class="jp peek">${hl(g.jp_full || g.jp, g.jp, 'good')}</p>
-          ${g.kr ? `<p class="kr">${esc(g.kr)}</p>` : ''}
-          <p class="why">${esc(g.why)}</p>
+          ${g.kr ? `<p class="kr">${nat(g.kr)}</p>` : ''}
+          <p class="why">${nat(g.why)}</p>
         </div>`,
   vocab: (c, v) => `
         <div class="fix vocabcard${cardCls(c, 'vocab', v)}">
           <div class="fix-top"><b class="jp">${ruby(v.jp)}</b>${cardTools(c, 'vocab', v)}</div>
-          <p class="mn peek">${esc(v.kr)}</p>
-          <p class="why">${v.t ? esc(v.t) + ' · ' : ''}${esc(v.context || '')}</p>
+          <p class="mn peek">${nat(v.kr)}</p>
+          <p class="why">${v.t ? esc(v.t) + ' · ' : ''}${nat(v.context || '')}</p>
         </div>`,
 };
 
@@ -2726,25 +2808,26 @@ function hiddenReport() {
   }
   return lines.length ? `[회화 노트 — 내가 「이건 아니야」로 뺀 예문 ${lines.length}개. 다음 판정 때 참고]\n${lines.join('\n')}` : '';
 }
-const hiddenNote = ids => ids.length ? `<p class="hid-note">뺀 예문 ${ids.length}개 <button class="unhide" data-unhide="${esc(ids.join(','))}">되돌리기</button></p>` : '';
+const hiddenNote = ids => ids.length ? `<p class="hid-note">${L(`뺀 예문 ${ids.length}개`, `外した例文 ${ids.length}個`)} <button class="unhide" data-unhide="${esc(ids.join(','))}">${L('되돌리기', 'もとに戻す')}</button></p>` : '';
 // 누르면 그 자리에서 다시 그린다(판정·순위가 바뀌므로). 스크롤 위치는 지킨다.
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-hide], [data-unhide]');
   if (!b) return;
   e.stopPropagation();
   const y = scrollY;
-  if (b.dataset.hide) { setDone('callsItem', b.dataset.hide, true); toast('뺐어 — 판정을 다시 계산했다 (카드 아래 「되돌리기」)'); }
+  if (b.dataset.hide) { setDone('callsItem', b.dataset.hide, true); toast(L('뺐어 — 판정을 다시 계산했다 (카드 아래 「되돌리기」)', '外しました — 判定をやり直しました（カードの下の「もとに戻す」で戻せます）')); }
   else b.dataset.unhide.split(',').forEach(id => setDone('callsItem', id, false));
   route();
   requestAnimationFrame(() => scrollTo(0, y));
 }, true);
-const MUST_LABEL = { fix: '고칠 표현', stuck: '막힌 순간', missed: '못 알아들음' };
+const MUST_LABEL = { fix: SEC_NAME.fix, stuck: SEC_NAME.stuck, missed: L('못 알아들음', '聞き取れなかった') };
 const mustRefs = c => new Set((c.must || []).flatMap((m, i) => effRefs(c, i)));
 const mustRuleId = (c, i) => `${c.id}:must:${i}`;
 const refItem = (c, ref) => { const [sec, i] = ref.split(':'); return [sec, callArr(c, sec)[+i]]; };
 const isMustCard = (c, sec, it) => mustRefs(c).has(`${sec}:${callArr(c, sec).indexOf(it)}`);
 // 「4회」는 같은 실수를 한 횟수 전체라, 펼쳐 보이는 말 수(카드로 정리된 장면)와 다를 수 있다 → 말로 풀어 쓴다
-const badgeText = b => b.replace(/^(\d+)회$/, '이번 통화 $1번');
+// target:"ko" 노트는 배지가 일본어(「3回」)라 그쪽도 같은 뜻으로 푼다.
+const badgeText = b => b.replace(/^(\d+)회$/, '이번 통화 $1번').replace(/^(\d+)回$/, '今回の通話で$1回');
 // ✗ 틀린 문장 / ✓ 고친 문장에서 달라진 곳만 표시한다(유저: 긴 문장은 어디가 틀렸는지 한눈에 안 보인다).
 // 후리가나 덩어리 {漢字|よみ} 는 한 덩어리로 비교한다. 문장 부호·공백만 다른 덩어리는 표시하지 않는다(눈만 어지럽다).
 const rubyToks = s => [...(s || '').matchAll(/\{([^|{}]+)\|([^|{}]+)\}|[\s\S]/g)].map(m => m[1]
@@ -2778,7 +2861,7 @@ function wrapRuns(t, cls, gaps = null, gapCls = 'dins') {
   let h = '', run = [], rc = '';
   const flush = () => { if (!run.length) return; const txt = run.map(i => t[i].k).join(''), inner = run.map(i => t[i].h).join('');
     h += rc && (rc === 'hit' || !PUNCT.test(txt)) ? `<span class="${rc}">${inner}</span>` : inner; run = []; };
-  const mark = `<span class="${gapCls}" title="여기에 빠진 말이 있다"></span>`;
+  const mark = `<span class="${gapCls}" title="${L('여기에 빠진 말이 있다', 'ここに抜けた言葉があります')}"></span>`;
   t.forEach((x, i) => { if (gaps && gaps.has(i)) { flush(); h += mark; } const c = cls(i); if (c !== rc) { flush(); rc = c; } run.push(i); });
   flush(); if (gaps && gaps.has(t.length)) h += mark; return h;
 }
@@ -2815,7 +2898,7 @@ function okPair(jp, hit, fixed) {
 }
 // 틀림 ❌ / 어색함 🔸 — 유저: 문법은 맞는데 말투만 어색한 것까지 ✗로 똑같이 보이면 헷갈린다.
 // 판정 예문(ng_ex)은 lv 필드, 고칠 표현 카드는 조각 판정(parts)에 ❌가 하나라도 있으면 틀림, 없으면 어색함.
-const LV = { bad: ['❌', '틀림'], meh: ['🔸', '어색함'] };
+const LV = { bad: ['❌', L('틀림', '間違い')], meh: ['🔸', L('어색함', '不自然')] };
 const fixLv = it => it.parts && it.parts.length && !it.parts.some(p => p.v === 'bad') ? 'meh' : 'bad';
 // ✗/✓ 표시와 문장을 두 칸으로 나눈다. 문장은 반드시 <span> 하나로 감싼다 — 안 감싸면 ruby 와 가나 조각이
 // 그리드 칸을 하나씩 차지해 글자가 세로로 한 줄씩 쪼개진다(2026-10-01 실제로 그렇게 보였다).
@@ -2827,14 +2910,14 @@ const evPair = (cls, mark, html) => `<p class="${cls}"><b>${mark}</b><span>${htm
 //   o = { t, at, lv, lvTag, kr, krLabel, wrong, right, rightMark, core:[a,b], body, after, tools, more, static, hideId }
 function exBox(o) {
   const lv = o.lv ? LV[o.lv] : null;
-  const nope = o.hideId ? `<button class="nope" data-hide="${esc(o.hideId)}" title="이 예문은 이 규칙과 맞지 않는다 — 빼고 판정을 다시 계산">이건 아니야</button>` : '';
+  const nope = o.hideId ? `<button class="nope" data-hide="${esc(o.hideId)}" title="${L('이 예문은 이 규칙과 맞지 않는다 — 빼고 판정을 다시 계산', 'この例文はこのルールに当てはまらない — 外して判定をやり直す')}">${L('이건 아니야', 'これは違う')}</button>` : '';
   const head = `<div class="ev-head"><span class="ev-lbl">${o.at ? `${shortDate(o.at)} · ` : ''}${esc(o.t || '')}</span>`
-    + `${o.lvTag && lv ? `<span class="lv lv-${o.lv}">${lv[0]} ${lv[1]}</span>` : ''}${o.more != null ? '<span class="ev-arr">자세히 ▸</span>' : ''}${nope}${o.tools || ''}</div>`;
-  const kr = o.kr ? `<p class="ev-kr">${o.krLabel ? `<b>${esc(o.krLabel)}</b> ` : ''}${esc(o.kr)}</p>` : '';
+    + `${o.lvTag && lv ? `<span class="lv lv-${o.lv}">${lv[0]} ${lv[1]}</span>` : ''}${o.more != null ? `<span class="ev-arr">${L('자세히 ▸', 'くわしく ▸')}</span>` : ''}${nope}${o.tools || ''}</div>`;
+  const kr = o.kr ? `<p class="ev-kr">${o.krLabel ? `<b>${esc(o.krLabel)}</b> ` : ''}${nat(o.kr)}</p>` : '';
   const wrong = o.wrong != null ? evPair('ev-x', lv ? lv[0] : '✗', o.wrong) : '';
   const right = o.right != null ? evPair('ev-o', o.rightMark || '✓', o.right) : '';
-  const core = o.core ? (([x, y]) => `<p class="ev-core"><b>핵심</b><span class="jp">${x}</span> → <span class="jp">${y}</span></p>`)(diffPair(o.core[0], o.core[1])) : '';
-  const more = o.more != null ? `<div class="ev-more">${o.more || '<p class="mh">더 볼 설명이 없다.</p>'}</div>` : '';
+  const core = o.core ? (([x, y]) => `<p class="ev-core"><b>${L('핵심', 'ポイント')}</b><span class="jp">${x}</span> → <span class="jp">${y}</span></p>`)(diffPair(o.core[0], o.core[1])) : '';
+  const more = o.more != null ? `<div class="ev-more">${o.more || `<p class="mh">${L('더 볼 설명이 없다.', 'ほかに説明はありません。')}</p>`}</div>` : '';
   return `<div class="ev${o.static ? ' ev-static' : ''}">${head}${kr}${o.body || ''}${wrong}${right}${core}${o.after || ''}${more}</div>`;
 }
 // 틀린 예문(데이터) → 틀린/고친 줄. 노트 카드에서 온 것(parts 있음)은 판정 조각으로 밑줄 + 핵심 한 줄,
@@ -2852,18 +2935,18 @@ const cardBox = (sec, it) => sec === 'fix'
     ? { kr: it.kr, lv: fixLv(it), wrong: it.parts && it.parts.length ? partsMarked(it.said_full, it.parts) : ruby(it.said_full),
         right: ruby(it.natural_full), core: it.said && it.natural ? [it.said, it.natural] : null }
     : (([x, y]) => ({ kr: it.kr, lv: fixLv(it), wrong: x, right: y }))(diffPair(it.said, it.natural)))
-  : sec === 'stuck' ? { kr: it.wanted, krLabel: '하려던 말', right: ruby(it.natural_full || '') }
+  : sec === 'stuck' ? { kr: it.wanted, krLabel: L('하려던 말', '言いたかったこと'), right: ruby(it.natural_full || '') }
   : { kr: it.kr, right: ruby(it.jp_full || ''), rightMark: '👂' };
 const evMore = (sec, it) => {
   const rows = [];
   if (sec === 'fix') {
-    if (it.why) rows.push(['왜 틀렸나', `<p>${esc(it.why)}</p>`]);
+    if (it.why) rows.push([L('왜 틀렸나', 'なぜ違う？'), `<p>${nat(it.why)}</p>`]);
   } else if (sec === 'stuck') {
-    if (it.said_full) rows.push(['실제로 한 말', `<p class="mx">${ruby(it.said_full)}</p>`]);
-    if (it.key && it.key.length) rows.push(['그때 필요했던 말', keysHtml(it.key)]);
+    if (it.said_full) rows.push([L('실제로 한 말', '実際に言ったこと'), `<p class="mx">${ruby(it.said_full)}</p>`]);
+    if (it.key && it.key.length) rows.push([L('그때 필요했던 말', 'そのとき必要だった言葉'), keysHtml(it.key)]);
   } else {
-    if (it.how) rows.push(['어떻게 들을까', `<p>${esc(it.how)}</p>`]);
-    if (it.key && it.key.length) rows.push(['들렸어야 할 말', keysHtml(it.key)]);
+    if (it.how) rows.push([L('어떻게 들을까', 'どう聞けばいい？'), `<p>${nat(it.how)}</p>`]);
+    if (it.key && it.key.length) rows.push([L('들렸어야 할 말', '聞き取りたかった言葉'), keysHtml(it.key)]);
   }
   return rows.map(([h, b]) => `<div class="mrow"><span class="mh">${h}</span>${b}</div>`).join('');
 };
@@ -2895,18 +2978,18 @@ const mustRule = (c, m, i, { open = false, pos = i, streak = 0 } = {}) => {
     <div class="rule${isDone('callsItem', mustRuleId(c, i)) ? ' done' : ''}${open ? ' open' : ''}" data-rule-id="${esc(mustRuleId(c, i))}" data-refs="${esc(effRefs(c, i).join(','))}">
       <div class="rule-top"><span class="rno">${pos + 1}</span>
         <div class="rule-main"><p class="rule-t jp">${ruby(m.rule)}</p>
-          <div class="badges">${streak ? `<span class="bd hot">${'🔴'.repeat(Math.min(streak + 1, 3))} ${streak + 1}통화 연속</span>` : ''}${(m.badges || []).map(b => `<span class="bd">${esc(badgeText(b))}</span>`).join('')}</div>
-          <div class="rule-toggle"><span class="arr">▸</span><span class="t-open">내가 실제로 한 말 ${items.length}개 보기</span><span class="t-close">접기</span></div></div>
+          <div class="badges">${streak ? `<span class="bd hot">${'🔴'.repeat(Math.min(streak + 1, 3))} ${L(`${streak + 1}통화 연속`, `通話${streak + 1}回連続`)}</span>` : ''}${(m.badges || []).map(b => `<span class="bd">${nat(badgeText(b))}</span>`).join('')}</div>
+          <div class="rule-toggle"><span class="arr">▸</span><span class="t-open">${L(`내가 실제로 한 말 ${items.length}개 보기`, `実際に言った文を見る（${items.length}）`)}</span><span class="t-close">${L('접기', '閉じる')}</span></div></div>
         <span class="rule-tools">${starBtn(mustRuleId(c, i))}${checkBtn('callsItem', mustRuleId(c, i))}</span></div>
       <div class="rule-body">
-        ${m.why ? `<p class="rule-why">${esc(m.why)}</p>` : ''}
-        <div class="ev-group"><p class="ev-group-h">내가 실제로 한 말 · ${items.length}</p>
+        ${m.why ? `<p class="rule-why">${nat(m.why)}</p>` : ''}
+        <div class="ev-group"><p class="ev-group-h">${L('내가 실제로 한 말', '実際に言った文')} · ${items.length}</p>
         ${items.map(([sec, it], k) => `
         ${k === 0 || items[k - 1][0] !== sec ? `<p class="ev-type">${MUST_LABEL[sec]} ${typeN(sec)}</p>` : ''}
         ${exBox({ t: it.t, ...cardBox(sec, it), more: evMore(sec, it), tools: starBtn(callItemId(c, sec, it)),
           hideId: hideRefId(c, i, `${sec}:${callArr(c, sec).indexOf(it)}`) })}`).join('')}
         ${hiddenNote(c.must[i] ? hiddenRefs(c, i) : [])}
-        ${m.more ? `<p class="rule-more">＋ ${esc(m.more)}</p>` : ''}</div>
+        ${m.more ? `<p class="rule-more">＋ ${nat(m.more)}</p>` : ''}</div>
       </div>
     </div>`;
 };
@@ -2936,7 +3019,7 @@ function syncChecks(root) {
 // 별표한 카드를 칸별로 묶어 그린다.
 function starCardsHtml(c) {
   const rules = starredRules(c);
-  const ruleHtml = rules.length ? `<p class="star-grp">🔴 필수 규칙 ${rules.length}</p>${rules.map(([m, i]) => mustRule(c, m, i, { open: true })).join('')}` : '';
+  const ruleHtml = rules.length ? `<p class="star-grp">${L('🔴 필수 규칙', '🔴 最優先ルール')} ${rules.length}</p>${rules.map(([m, i]) => mustRule(c, m, i, { open: true })).join('')}` : '';
   const groups = ruleHtml + CALL_SECS.map(([sec, , title]) => {
     const its = callArr(c, sec).filter(it => isStar(callItemId(c, sec, it))).sort(byT);
     return its.length ? `<p class="star-grp">${title} ${its.length}</p>${its.map(it => CARD[sec](c, it)).join('')}` : '';
@@ -2952,14 +3035,14 @@ function renderCallDetail(c) {
   const mustIn = sec => [...mustSet].filter(r => r.startsWith(sec + ':')).length;
   const seen = sec => callArr(c, sec).filter(it => isDone('callsItem', callItemId(c, sec, it))).length;
   const secLabel = {
-    fix: () => `✏️ 고칠 표현 ${seen('fix')}/${c.fixes.length}`,
-    stuck: () => `🧱 막힌 순간 ${seen('stuck')}/${callArr(c, 'stuck').length}`,
-    missed: () => `👂 못 알아들은 순간 ${seen('missed')}/${callArr(c, 'missed').length}`,
-    steal: () => `📥 가져다 쓸 표현 ${seen('steal')}/${c.steal.length}`,
-    good: () => `👍 잘한 점 ${seen('good')}/${c.good.length}`,
-    vocab: () => `📖 새 단어 ${seen('vocab')}/${c.vocab.length}`,
-    star: () => `⭐ 별표 ${callStars(c).length}`,
-    must: () => `🔴 필수 ${mustDoneN()}/${must.length}`,
+    fix: () => `${SEC_TITLE.fix} ${seen('fix')}/${c.fixes.length}`,
+    stuck: () => `${SEC_TITLE.stuck} ${seen('stuck')}/${callArr(c, 'stuck').length}`,
+    missed: () => `${SEC_TITLE.missed} ${seen('missed')}/${callArr(c, 'missed').length}`,
+    steal: () => `${SEC_TITLE.steal} ${seen('steal')}/${c.steal.length}`,
+    good: () => `${SEC_TITLE.good} ${seen('good')}/${c.good.length}`,
+    vocab: () => `${SEC_TITLE.vocab} ${seen('vocab')}/${c.vocab.length}`,
+    star: () => `${L('⭐ 별표', '⭐ 見返す')} ${callStars(c).length}`,
+    must: () => `${L('🔴 필수', '🔴 最優先')} ${mustDoneN()}/${must.length}`,
   };
   const secs = [
     ...(must.length ? [['sec-must', secLabel.must()]] : []),
@@ -2970,71 +3053,71 @@ function renderCallDetail(c) {
     ['sec-steal', secLabel.steal()],
     ['sec-good', secLabel.good()],
     ['sec-vocab', secLabel.vocab()],
-    ['sec-stats', '📊 말버릇'],
+    ['sec-stats', L('📊 말버릇', '📊 口ぐせ')],
   ];
   const list = sec => [...callArr(c, sec)].filter(it => !isMustCard(c, sec, it)).sort(byT).map(it => CARD[sec](c, it)).join('');
-  const upLine = sec => mustIn(sec) ? `<button class="upline" data-go-must>🔴 필수에 들어간 ${mustIn(sec)}건 ↑ (필수 칸에서 보기)</button>` : '';
+  const upLine = sec => mustIn(sec) ? `<button class="upline" data-go-must>${L(`🔴 필수에 들어간 ${mustIn(sec)}건 ↑ (필수 칸에서 보기)`, `🔴 最優先に入った ${mustIn(sec)}件 ↑（最優先タブで見る）`)}</button>` : '';
   const cardTotal = CALL_SECS.reduce((n, [sec]) => n + callArr(c, sec).length, 0);
   const restN = cardTotal - mustSet.size;
   const mustHtml = must.length ? `
-      <h3 class="call-sec" id="sec-must">🔴 이번 필수</h3>
+      <h3 class="call-sec" id="sec-must">${L('🔴 이번 필수', '🔴 今回の最優先')}</h3>
       <div class="must-sum">
-        <div class="m"><b class="must-n">${must.length}개</b><small>🔴 이번 필수 · 카드 ${mustSet.size}장 · 약 ${Math.max(3, Math.round(mustSet.size * 0.3))}분</small></div>
-        <button data-go-rest><b>${restN}장</b><small>⚪ 여유 있으면 (아래 칩)</small></button>
+        <div class="m"><b class="must-n">${must.length}${L('개', '個')}</b><small>${L(`🔴 이번 필수 · 카드 ${mustSet.size}장 · 약 ${Math.max(3, Math.round(mustSet.size * 0.3))}분`, `🔴 今回の最優先 · カード${mustSet.size}枚 · 約${Math.max(3, Math.round(mustSet.size * 0.3))}分`)}</small></div>
+        <button data-go-rest><b>${restN}${L('장', '枚')}</b><small>${L('⚪ 여유 있으면 (아래 칩)', '⚪ 余裕があれば（上のタブ）')}</small></button>
       </div>
       <div class="must-prog"><span><i></i></span><em class="must-cnt"></em></div>
-      <div class="must-fin" hidden><b>🎉 오늘 필수 끝!</b><small>이 규칙들은 다음 통화에서 또 나오는지 본다. 여유 있으면 나머지 ${restN}장도.</small>
-        <br><button data-go-rest>나머지 보러 가기</button></div>
-      <p class="hint">바쁜 날은 이 칸만 보면 된다. 규칙을 누르면 실제로 한 말이 펼쳐지고, 외웠으면 ✓.</p>
-      <p class="mark-legend"><span class="dx">빨간 물결</span> 틀림 · <span class="dz">주황 점선</span> 어색함 · <span class="dins"></span> 빠진 자리 · <span class="do">초록</span> 고친 곳·맞게 쓴 곳</p>
+      <div class="must-fin" hidden><b>${L('🎉 오늘 필수 끝!', '🎉 今日の最優先、完了！')}</b><small>${L(`이 규칙들은 다음 통화에서 또 나오는지 본다. 여유 있으면 나머지 ${restN}장도.`, `このルールは次の通話でまた出るかチェックします。余裕があれば残りの${restN}枚もどうぞ。`)}</small>
+        <br><button data-go-rest>${L('나머지 보러 가기', '残りを見る')}</button></div>
+      <p class="hint">${L('바쁜 날은 이 칸만 보면 된다. 규칙을 누르면 실제로 한 말이 펼쳐지고, 외웠으면 ✓.', '忙しい日はここだけ見ればOK。ルールを押すと実際に言った文が開きます。覚えたら ✓。')}</p>
+      ${markLegend()}
       ${(({ idx, streak }) => idx.map((i, pos) => mustRule(c, must[i], i, { pos, streak: streak[i] || 0 })).join(''))(mustOrder(c))}` : '';
   app.innerHTML = `
-    <button class="back">← 회화 목록</button>
+    <button class="back">${L('← 회화 목록', '← 会話リスト')}</button>
     <div class="detail">
-      <h2>${esc(c.title)}</h2>
-      <div class="meta"><span>${esc(c.date)}</span><span>${esc(c.duration)}</span><span>${esc(c.with || '')}</span></div>
+      <h2>${nat(c.title)}</h2>
+      <div class="meta"><span>${esc(c.date)}</span><span>${nat(c.duration)}</span><span>${nat(c.with || '')}</span></div>
       <div class="filt">${FILT.map(([k]) => `<button data-filt="${k}"></button>`).join('')}</div>
       <div class="jump">${secs.map(([id, label]) => `<button data-go="${id}">${label}</button>`).join('')}</div>
 ${mustHtml}
 
-      <h3 class="call-sec" id="sec-star">⭐ 별표</h3>
+      <h3 class="call-sec" id="sec-star">${L('⭐ 별표', '⭐ 見返す')}</h3>
       <div class="star-body"></div>
 
-      ${must.length ? '' : `<h3 class="call-sec">🔁 반복되는 실수</h3>
-      <ul class="patterns">${(c.patterns || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>`}
+      ${must.length ? '' : `<h3 class="call-sec">${L('🔁 반복되는 실수', '🔁 くり返すミス')}</h3>
+      <ul class="patterns">${(c.patterns || []).map(p => `<li>${nat(p)}</li>`).join('')}</ul>`}
 
-      <h3 class="call-sec" id="sec-fix">✏️ 고칠 표현</h3>
+      <h3 class="call-sec" id="sec-fix">${SEC_TITLE.fix}</h3>
       ${upLine('fix')}
-      <p class="hint">줄 친 쪽이 실제로 한 말, 굵은 쪽이 자연스러운 표현. 시각은 녹음 속 위치. ★를 누르면 ⭐ 칸에 모인다.</p>
+      <p class="hint">${L('줄 친 쪽이 실제로 한 말, 굵은 쪽이 자연스러운 표현. 시각은 녹음 속 위치. ★를 누르면 ⭐ 칸에 모인다.', '線が引いてあるのが実際に言った文、太字が自然な言い方です。時間は録音の中の位置。★ を押すと「見返す」に集まります。')}</p>
       ${list('fix')}
 
       ${callArr(c, 'stuck').length ? `
-      <h3 class="call-sec" id="sec-stuck">🧱 막힌 순간</h3>
+      <h3 class="call-sec" id="sec-stuck">${SEC_TITLE.stuck}</h3>
       ${upLine('stuck')}
-      <p class="hint">말하려다 막힌 곳. 실제로 한 말은 조각마다 ✅ 맞음 · 🔸 통하지만 어색 · ❌ 틀림으로 나눴다. 그때 떠올리지 못한 말이 아래 칩에 있다.</p>
+      <p class="hint">${L('말하려다 막힌 곳. 실제로 한 말은 조각마다 ✅ 맞음 · 🔸 통하지만 어색 · ❌ 틀림으로 나눴다. 그때 떠올리지 못한 말이 아래 칩에 있다.', '言おうとして詰まったところ。実際に言った文を ✅ 正しい · 🔸 通じるけど不自然 · ❌ 間違い に分けました。そのとき出てこなかった言葉は下にあります。')}</p>
       ${list('stuck')}` : ''}
 
       ${callArr(c, 'missed').length ? `
-      <h3 class="call-sec" id="sec-missed">👂 못 알아들은 순간</h3>
+      <h3 class="call-sec" id="sec-missed">${SEC_TITLE.missed}</h3>
       ${upLine('missed')}
-      <p class="hint">상대 말을 놓친 곳. 「번역 가리기」를 켜고 ▶로 먼저 들어본 뒤 뜻을 확인해보자.</p>
+      <p class="hint">${L('상대 말을 놓친 곳. 「번역 가리기」를 켜고 ▶로 먼저 들어본 뒤 뜻을 확인해보자.', '相手の言葉を聞き逃したところ。「和訳」をOFFにして、▶ で先に聞いてから意味を確かめてみましょう。')}</p>
       ${list('missed')}` : ''}
 
-      <h3 class="call-sec" id="sec-steal">📥 가져다 쓸 표현</h3>
-      <p class="hint">상대가 쓴 자연스러운 표현. 「번역 가리기」를 켜면 뜻을 가리고 떠올려볼 수 있다.</p>
+      <h3 class="call-sec" id="sec-steal">${SEC_TITLE.steal}</h3>
+      <p class="hint">${L('상대가 쓴 자연스러운 표현. 「번역 가리기」를 켜면 뜻을 가리고 떠올려볼 수 있다.', '相手が使った自然な表現。「和訳」をOFFにすると、意味を隠して思い出す練習ができます。')}</p>
       ${list('steal')}
 
-      <h3 class="call-sec" id="sec-good">👍 잘한 점</h3>
+      <h3 class="call-sec" id="sec-good">${SEC_TITLE.good}</h3>
       ${list('good')}
 
-      <h3 class="call-sec" id="sec-vocab">📖 새 단어</h3>
+      <h3 class="call-sec" id="sec-vocab">${SEC_TITLE.vocab}</h3>
       ${callArr(c, 'vocab').map(v => CARD.vocab(c, v)).join('')}
 
-      <h3 class="call-sec" id="sec-stats">📊 말버릇 (통화 전체)</h3>
+      <h3 class="call-sec" id="sec-stats">${L('📊 말버릇 (통화 전체)', '📊 口ぐせ（通話全体）')}</h3>
       <div class="stats">${(c.stats || []).map(s => `
-        <div class="stat"><b>${esc(s.label)}</b>${esc(s.value)}${s.note ? `<br><small>${esc(s.note)}</small>` : ''}</div>`).join('')}
+        <div class="stat"><b>${nat(s.label)}</b>${nat(s.value)}${s.note ? `<br><small>${nat(s.note)}</small>` : ''}</div>`).join('')}
       </div>
-      ${doneBar('calls', c.id, '이 회화 복습 완료로 표시')}
+      ${doneBar('calls', c.id, L('이 회화 복습 완료로 표시', 'この会話の復習を完了にする'))}
     </div>`;
 
   // 카드 체크·별표 → 위쪽 칩의 「n/전체」「⭐ n」을 바로 갱신
@@ -3050,7 +3133,7 @@ ${mustHtml}
     wireKr(root);
   };
   wireCards(app);
-  wireDoneBar('calls', c.id, '이 회화 복습 완료로 표시');
+  wireDoneBar('calls', c.id, L('이 회화 복습 완료로 표시', 'この会話の復習を完了にする'));
   wireCallClips(c);
   app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
   // ---- 칩 = 탭 ----
@@ -3077,7 +3160,7 @@ ${mustHtml}
   // ⭐ 칸은 열 때마다 새로 그린다 — 다른 칸에서 방금 누른 별표까지 반영되게
   const drawStars = () => {
     const body = panels['sec-star'].querySelector('.star-body');
-    body.innerHTML = starCardsHtml(c) || '<p class="empty">아직 별표한 카드가 없다. 카드 오른쪽 위 ★를 누르면 여기로 모인다.</p>';
+    body.innerHTML = starCardsHtml(c) || `<p class="empty">${L('아직 별표한 카드가 없다. 카드 오른쪽 위 ★를 누르면 여기로 모인다.', 'まだ★したカードはありません。カード右上の ★ を押すと、ここに集まります。')}</p>`;
     wireCards(body);
     wireRuleChecks(body);
     wireCallClips(c, body);
@@ -3116,7 +3199,7 @@ ${mustHtml}
       const cards = [...p.querySelectorAll('.fix')];
       let msg = p.querySelector('.filt-empty');
       const shown = cards.filter(x => mode === 'all' || (mode === 'done') === x.classList.contains('done')).length;
-      const text = cards.length && !shown ? (mode === 'todo' ? '이 칸은 다 확인했다 👏  「확인한 것」에서 다시 볼 수 있다.' : '이 칸에서 확인한 카드가 아직 없다.') : '';
+      const text = cards.length && !shown ? (mode === 'todo' ? L('이 칸은 다 확인했다 👏  「확인한 것」에서 다시 볼 수 있다.', 'このタブは全部確認しました 👏 「確認済み」でまた見られます。') : L('이 칸에서 확인한 카드가 아직 없다.', 'このタブで確認したカードはまだありません。')) : '';
       if (text && !msg) { msg = document.createElement('p'); msg.className = 'empty filt-empty'; p.append(msg); }
       if (msg) { msg.textContent = text; msg.hidden = !text; }
     }
@@ -3149,7 +3232,7 @@ ${mustHtml}
     detail.querySelector('.must-prog i').style.width = (n / must.length * 100) + '%';
     detail.querySelector('.must-cnt').textContent = `${n} / ${must.length}`;
     detail.querySelector('.must-sum .m').classList.toggle('all', all);
-    detail.querySelector('.must-n').textContent = all ? `${n}/${must.length} ✓` : `${must.length}개`;
+    detail.querySelector('.must-n').textContent = all ? `${n}/${must.length} ✓` : `${must.length}${L('개', '個')}`;
     detail.querySelector('.must-fin').hidden = !all;
   }
   detail.addEventListener('click', e => {
@@ -3208,6 +3291,8 @@ const cornerBtns = {
 cornerBtns.nhk.hidden = NHK.length === 0;
 cornerBtns.yt.hidden = VIDEOS.length === 0;   // 테스터 페이지엔 유튜브 노트가 없다
 cornerBtns.calls.hidden = !(CALLS || CALLS_LOCKED);
+// 「반복」은 유튜브·NHK 구간 재생용이다. 둘 다 없는 배포(테스터 페이지)에선 누를 데가 없어 숨긴다.
+document.getElementById('toggleLoop').hidden = !VIDEOS.length && !NHK.length;
 cornerBtns.calls.onclick = () => { location.hash = 'calls'; };
 cornerBtns.yt.onclick = () => { location.hash = ''; };
 cornerBtns.nhk.onclick = () => { location.hash = 'nhk'; };
@@ -3223,17 +3308,17 @@ function setCorner(name) {
 function updateCount(name) {
   const el = document.getElementById('count');
   if (name === 'hard') {
-    el.textContent = `${hardList().length + (CALLS ? callStarTotal() : 0)}개`;
+    el.textContent = `${hardList().length + (CALLS ? callStarTotal() : 0)}${L('개', '件')}`;
   } else if (name === 'vocab') {
-    el.textContent = `${vocabList().length}개`;
+    el.textContent = `${vocabList().length}${L('개', '件')}`;
   } else if (name === 'calls') {
-    el.textContent = CALLS ? `${CALLS.length}통화 · 복습 ${doneCount('calls', CALLS.map(c => c.id))}` : '잠김';
+    el.textContent = CALLS ? L(`${CALLS.length}통화 · 복습 ${doneCount('calls', CALLS.map(c => c.id))}`, `通話${CALLS.length}件 · 復習済み ${doneCount('calls', CALLS.map(c => c.id))}`) : L('잠김', 'ロック中');
   } else if (name === 'nhk') {
     const done = doneCount('nhk', NHK.map(i => i.group));
     el.textContent = `${NHK.length}꼭지 · 완료 ${done}`;
   } else {
     const done = doneCount('yt', VIDEOS.map(v => v.id));
-    el.textContent = `${VIDEOS.length}개 · 완료 ${done}`;
+    el.textContent = `${VIDEOS.length}${L('개 · 완료', '件 · 完了')} ${done}`;
   }
 }
 
@@ -3299,7 +3384,7 @@ savePop.onclick = () => {
     label: currentLabel(),
   };
   const added = addVocab(entry);
-  toast(added ? `저장: ${entry.w}` : '이미 단어장에 있다');
+  toast(added ? `${L('저장', '保存')}: ${entry.w}` : L('이미 단어장에 있다', 'もう単語帳に入っています'));
   getSelection().removeAllRanges();
   hideSavePop();
   if (cornerBtns.vocab.classList.contains('on')) renderVocab();
@@ -3313,7 +3398,7 @@ const plainText = el => { const d = el.cloneNode(true); d.querySelectorAll('rt')
 function currentLabel() {
   const h = location.hash.slice(1);
   if (h.startsWith('nhk/')) return NHK[+h.slice(4)]?.group || 'NHK';
-  if (h.startsWith('calls/')) return (CALLS || []).find(c => c.id === h.slice(6))?.title || '회화 노트';
+  if (h.startsWith('calls/')) return (CALLS || []).find(c => c.id === h.slice(6))?.title || L('회화 노트', '会話ノート');
   const v = VIDEOS.find(x => x.id === h);
   return v ? v.title : '';
 }
@@ -3373,13 +3458,13 @@ document.getElementById('openSync').onclick = () => {
 
 function renderKeyState() {
   const has = !!syncKey();
-  syncPanel.querySelector('.autostate').textContent = has ? '연결됨' : '연결 안 됨';
+  syncPanel.querySelector('.autostate').textContent = has ? L('연결됨', '連携中') : L('연결 안 됨', '未連携');
   syncPanel.querySelector('.autostate').style.color =
     has ? 'var(--accent)' : 'var(--muted)';
   const last = +localStorage.getItem('sync.last') || 0;
   document.getElementById('autoMsg').textContent = has
-    ? (last ? `마지막 올림 ${new Date(last).toLocaleString('ko-KR', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}` : '아직 올린 적 없음')
-    : '키를 만들어 다른 기기에 넣으면 자동으로 맞춰진다.';
+    ? (last ? `${L('마지막 올림', '最後に送信')} ${new Date(last).toLocaleString(L('ko-KR', 'ja-JP'), {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}` : L('아직 올린 적 없음', 'まだ送信していません'))
+    : L('키를 만들어 다른 기기에 넣으면 자동으로 맞춰진다.', 'キーを作ってほかの端末に入れると、自動でそろいます。');
   document.getElementById('keyIn').value = '';
 }
 
@@ -3390,46 +3475,48 @@ document.getElementById('keyMake').onclick = async () => {
   localStorage.setItem(SYNC_KEY_NAME, key);
   renderKeyState();
   await pushCloud();
-  toast('키를 만들었다 — 「이 기기 키 복사」로 폰에 옮겨라');
+  toast(L('키를 만들었다 — 「이 기기 키 복사」로 폰에 옮겨라', 'キーを作りました — 「この端末のキーをコピー」でスマホに移してください'));
 };
 
 document.getElementById('keySave').onclick = async () => {
   const k = document.getElementById('keyIn').value.trim();
-  if (k.length < 24) { toast('키가 너무 짧다 — 전체를 붙여넣었는지 확인'); return; }
+  if (k.length < 24) { toast(L('키가 너무 짧다 — 전체를 붙여넣었는지 확인', 'キーが短すぎます — 全部貼り付けたか確認してください')); return; }
   localStorage.setItem(SYNC_KEY_NAME, k);
   renderKeyState();
   const n = await pullCloud(false);
   await pushCloud();
-  toast(n ? `연결됨 — ${n}개 받아왔다` : '연결됨');
+  toast(n ? L(`연결됨 — ${n}개 받아왔다`, `連携しました — ${n}件受け取りました`) : L('연결됨', '連携しました'));
 };
 
 document.getElementById('keyCopy').onclick = async () => {
-  if (!syncKey()) { toast('아직 키가 없다 — 「새 키 만들기」 먼저'); return; }
+  if (!syncKey()) { toast(L('아직 키가 없다 — 「새 키 만들기」 먼저', 'まだキーがありません — 先に「新しいキーを作る」を押してください')); return; }
   try {
     await navigator.clipboard.writeText(syncKey());
-    toast('복사됨 — 폰의 같은 칸에 붙여넣어라');
+    toast(L('복사됨 — 폰의 같은 칸에 붙여넣어라', 'コピーしました — スマホの同じ欄に貼り付けてください'));
   } catch {
     document.getElementById('keyIn').value = syncKey();
-    toast('자동 복사 실패 — 위 칸에서 직접 복사');
+    toast(L('자동 복사 실패 — 위 칸에서 직접 복사', '自動でコピーできませんでした — 上の欄から直接コピーしてください'));
   }
 };
 
 document.getElementById('keyLink').onclick = async () => {
-  if (!syncKey()) { toast('아직 키가 없다 — 「새 키 만들기」 먼저'); return; }
-  const link = 'https://butdifferent87.github.io/japanese-practice/#key=' + encodeURIComponent(syncKey());
+  if (!syncKey()) { toast(L('아직 키가 없다 — 「새 키 만들기」 먼저', 'まだキーがありません — 先に「新しいキーを作る」を押してください')); return; }
+  // 테스터 페이지(u/<슬러그>/)는 자기 주소로 — 고정 주소면 폰에서 후유 사이트가 열린다
+  const base = location.pathname.includes('/u/') ? location.origin + location.pathname : 'https://butdifferent87.github.io/japanese-practice/';
+  const link = base + '#key=' + encodeURIComponent(syncKey());
   try {
     await navigator.clipboard.writeText(link);
-    toast('링크 복사됨 — 폰에서 열면 바로 연결된다');
+    toast(L('링크 복사됨 — 폰에서 열면 바로 연결된다', 'リンクをコピーしました — スマホで開くとそのまま連携されます'));
   } catch {
     document.getElementById('keyIn').value = link;
-    toast('자동 복사 실패 — 위 칸에서 직접 복사');
+    toast(L('자동 복사 실패 — 위 칸에서 직접 복사', '自動でコピーできませんでした — 上の欄から直接コピーしてください'));
   }
 };
 
 document.getElementById('keyOff').onclick = () => {
   localStorage.removeItem(SYNC_KEY_NAME);
   renderKeyState();
-  toast('연결을 끊었다 — 이 기기 데이터는 그대로다');
+  toast(L('연결을 끊었다 — 이 기기 데이터는 그대로다', '連携を解除しました — この端末のデータはそのままです'));
 };
 document.getElementById('closeSync').onclick = () => { syncPanel.hidden = true; };
 syncPanel.onclick = e => { if (e.target === syncPanel) syncPanel.hidden = true; };
@@ -3438,24 +3525,24 @@ document.getElementById('copySync').onclick = async () => {
   const link = await syncLink();
   try {
     await navigator.clipboard.writeText(link);
-    msg('copyMsg', '복사됨 — 다른 기기에 붙여넣기');
+    msg('copyMsg', L('복사됨 — 다른 기기에 붙여넣기', 'コピーしました — ほかの端末に貼り付けてください'));
   } catch {
     // 클립보드 권한이 막힌 경우: 직접 고를 수 있게 넣어준다
     const box = document.getElementById('syncIn');
     box.value = link; box.select();
-    msg('copyMsg', '자동 복사 실패 — 아래 칸에서 직접 복사');
+    msg('copyMsg', L('자동 복사 실패 — 아래 칸에서 직접 복사', '自動でコピーできませんでした — 下の欄から直接コピーしてください'));
   }
 };
 
 document.getElementById('applySync').onclick = async () => {
   const code = document.getElementById('syncIn').value.trim();
-  if (!code) return msg('applyMsg', '붙여넣은 코드가 없다');
+  if (!code) return msg('applyMsg', L('붙여넣은 코드가 없다', '貼り付けたコードがありません'));
   try {
     const n = mergeState(await decodeState(code));
-    msg('applyMsg', n ? `${n}개 반영됨` : '새로 반영할 게 없다 (이미 같음)');
+    msg('applyMsg', n ? L(`${n}개 반영됨`, `${n}件反映しました`) : L('새로 반영할 게 없다 (이미 같음)', '新しく反映するものはありません（すでに同じです）'));
     route();
   } catch {
-    msg('applyMsg', '코드를 읽을 수 없다 — 전체를 복사했는지 확인');
+    msg('applyMsg', L('코드를 읽을 수 없다 — 전체를 복사했는지 확인', 'コードを読み取れません — 全部コピーしたか確認してください'));
   }
 };
 
@@ -3467,11 +3554,11 @@ async function consumeSyncHash() {
     const n = mergeState(await decodeState(h.slice(5)));
     history.replaceState(null, '', location.pathname + location.search);
     route();   // replaceState 는 hashchange 를 안 쏜다 — 직접 다시 그린다
-    toast(n ? `동기화 완료 — ${n}개 반영됨` : '동기화 완료 — 이미 최신');
+    toast(n ? L(`동기화 완료 — ${n}개 반영됨`, `同期しました — ${n}件反映しました`) : L('동기화 완료 — 이미 최신', '同期しました — すでに最新です'));
   } catch {
     history.replaceState(null, '', location.pathname + location.search);
     route();   // replaceState 는 hashchange 를 안 쏜다 — 직접 다시 그린다
-    toast('동기화 코드를 읽을 수 없다');
+    toast(L('동기화 코드를 읽을 수 없다', '同期コードを読み取れません'));
   }
   return true;
 }
@@ -3570,9 +3657,9 @@ function route() {
     history.replaceState(null, '', location.pathname + location.search);
     if (k.length >= 24) {
       localStorage.setItem(SYNC_KEY_NAME, k);
-      pullCloud(false).then(n => toast(n ? `연결됨 — ${n}개 받아왔다` : '연결됨'));
+      pullCloud(false).then(n => toast(n ? L(`연결됨 — ${n}개 받아왔다`, `連携しました — ${n}件受け取りました`) : L('연결됨', '連携しました')));
     } else {
-      toast('연결 키가 짧다 — 다시 받아라');
+      toast(L('연결 키가 짧다 — 다시 받아라', '連携キーが短いです — もう一度受け取ってください'));
     }
     route();
     return;
@@ -3580,13 +3667,14 @@ function route() {
 
   if (h === 'selfcheck') { runSelfCheck(); return; }
   if (h === 'vocab') { setCorner('vocab'); renderVocab(); scrollTo(0, 0); return; }
-  if (h === 'hard') { setCorner('hard'); renderHard(); scrollTo(0, 0); return; }
+  if (h === 'hard') { setCorner('hard'); if (CALLS) document.body.dataset.tgt = tgtLang(CALLS[0]); renderHard(); scrollTo(0, 0); return; }
 
   // 회화 노트. 데이터가 아예 없는 빌드면 없는 코너처럼 군다.
   if (h === 'calls' || h.startsWith('calls/')) {
     if (!CALLS && !CALLS_LOCKED) { location.hash = ''; return; }
     setCorner('calls');
     if (!CALLS) { renderCallsLock(); scrollTo(0, 0); return; }
+    document.body.dataset.tgt = tgtLang(CALLS.find(x => x.id === h.slice(6)) || CALLS[0]);   // 줄간격 CSS(body[data-tgt=ko])용
     if (h === 'calls/star') { try { localStorage.setItem(STAR_CHIP_KEY, 'calls'); } catch {} location.hash = 'hard'; return; }
     if (h === 'calls/fix') { renderFixStudy(); scrollTo(0, 0); return; }
     const c = h.startsWith('calls/') ? CALLS.find(x => x.id === h.slice(6)) : null;
