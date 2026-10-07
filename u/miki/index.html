@@ -2427,7 +2427,7 @@ function fixBatch(fq, skip = false) {
   return fixPageItems(fq, fixPageK(fq));
 }
 const qLabel = it => it.tier === 1 ? it.x.rule : it.tier === 2 ? it.m.rule
-  : it.sec === 'fix' ? it.it.said : it.sec === 'stuck' ? it.it.wanted : it.it.jp_full;
+  : it.it.label || (it.sec === 'fix' ? it.it.said : it.sec === 'stuck' ? it.it.wanted : it.it.jp_full);   // label = 목록용 짧은 이름(「일본어 뜻 → 한국어」, target:"ko" 노트)
 const qTag = it => it.tier === 1 ? (it.x.base ? L('기초 단어', '基礎単語') : L('버릇', 'くせ')) : it.tier === 2 ? `${shortDate(it.c.date)} ${L('필수', '最優先')}` : `${shortDate(it.c.date)} ${SEC_NAME[it.sec]}`;
 const qDoneN = fq => fq.q.filter(it => isDone('callsItem', it.id)).length;
 
