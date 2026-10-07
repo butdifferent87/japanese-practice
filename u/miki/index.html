@@ -373,8 +373,6 @@
   .fx-list li .fx-tag { margin-left: auto; font-style: normal; font-size: 11px; color: #C8463C; white-space: nowrap; }
   .fx-list li.ok .jp { color: var(--muted); text-decoration: line-through; }
   .fx-list li.ok .fx-tag { color: var(--accent); }
-  .fx-list li.fx-more-i { display: none; }
-  .fx-more { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
   .fx-go { display: block; width: 100%; margin-top: 12px; padding: 11px; border-radius: 12px; font-size: 15px; font-weight: 700;
     background: #C8463C; color: #fff; border-color: #C8463C; }
   @media (max-width: 560px) {
@@ -2206,7 +2204,7 @@ function callPlayer(k) {
 
 async function prepareCallAudio(c) {
   // 📥 가져다 쓸 표현 + ✏️ 카드 속 「상대:」 줄
-  const clips = [...c.steal, ...(c.missed || []), ...c.fixes.map(f => f.ctx).filter(Boolean)].filter(s => s.clipKey);
+  const clips = [...c.steal, ...(c.missed || []), ...c.fixes.map(f => f.ctx).filter(Boolean), ...c.fixes, ...(c.stuck || [])].filter(s => s.clipKey);
   if (!clips.length) return false;
   if (typeof CALLS_DATA !== 'undefined') {           // 로컬: 파일이 옆에 있다
     clips.forEach(s => { callClipUrls[`${c.id}/${s.clipKey}`] = s.clip; });
@@ -2221,6 +2219,8 @@ async function prepareCallAudio(c) {
   return true;
 }
 
+// ✏️·🧱 카드 장면 음성 버튼(카드에 audio:true 로 잘린 조각이 있을 때만). 자기 목소리 + 상대 맞장구가 섞여서 「이 장면」이라 부른다
+const selfClip = it => it && it.clipKey ? `<button class="clip-btn" data-clip="${esc(it.clipKey)}" disabled>${L('▶ 이 장면 듣기', '▶ この場面を聞く')}</button>` : '';
 // data-clip 이 붙은 것(▶ 버튼, 일본어 문장)을 누르면 그 조각을 튼다. 재생 중인 카드는 테두리로 표시.
 function wireCallClips(c, root = app) {
   const els = root.querySelectorAll('[data-clip]');
@@ -2314,7 +2314,7 @@ function fixBoard() {
   // 노트 카드(고칠 표현·막힌 순간)를 ✗/✓ 예문 형식으로. 막힌 순간은 실제로 한 말 → 이렇게 말하면 됨
   const cardEx = (c, i, n = 2) => effRefs(c, i).map(r => [r, ...refItem(c, r)]).filter(([, sec, it]) => it && (sec === 'fix' || sec === 'stuck')).slice(0, n)
     .map(([r, sec, it]) => ({ jp: it.said_full || it.said || '', fixed: it.natural_full || it.natural || '', kr: it.kr || it.wanted || '', t: it.t, lv: fixLv(it),
-      parts: it.parts, core: sec === 'fix' && it.said && it.natural ? [it.said, it.natural] : null, at: c.date, hideId: hideRefId(c, i, r) }));
+      parts: it.parts, core: sec === 'fix' && it.said && it.natural ? [it.said, it.natural] : null, at: c.date, hideId: hideRefId(c, i, r), clipKey: it.clipKey, cid: c.id }));
   // 이번 통화에 예문이 없는 규칙(⚪ 쓸 기회 없음 등)은 그 규칙이 처음 필수가 된 통화의 카드를 보여준다 — 유저: 틀린 문장이 안 보인다
   for (const x of all) {
     if (x.ngEx.length) continue;
@@ -2442,7 +2442,6 @@ function fixEntryHtml() {
   // 오른쪽 표시: 끝낸 건 ✓, 여러 통화 연속인 버릇은 🔴×연속 수(왜 지금 해야 하는지), 나머지는 출처 태그
   const tag = it => isDone('callsItem', it.id) ? '✓' : it.tier === 1 && it.x.run >= 2
     ? `${'🔴'.repeat(Math.min(it.x.run, 3))} ${L(`${it.x.run}통화 연속`, `${it.x.run}回連続`)}` : qTag(it);
-  const SHOW = 6;   // 히어로엔 6개까지만 — 다 보이면 목록이 화면 밖으로 밀린다. 나머지는 「+N개 더」
   const go = !batch.length ? '' : next < 0 ? L(`🎉 이번 묶음 끝 · 다음 ${FIX_N}개 →`, `🎉 このセット完了 · 次の${FIX_N}個へ →`)
     : done ? L(`${next + 1}번부터 이어서 학습 →`, `${next + 1}番から続ける →`) : L('학습 시작 →', '学習を始める →');
   return `
@@ -2450,8 +2449,7 @@ function fixEntryHtml() {
       <div class="fx-hh"><h2 class="fx-h">${L('🔴 지금 고칠 것', '🔴 いま直すこと')}</h2><span class="fx-sub">${L(`모든 통화에서 반복된 실수 · ${pg}묶음 / ${pgN}`, `すべての通話のくり返しミス · ${pg}セット目 / ${pgN}`)}</span></div>
       <div class="fx-bar"><i style="width:${batch.length ? Math.round(done / batch.length * 100) : 0}%"></i></div>
       <p class="fx-bar-t">${L(`이번 묶음 ${done} / ${batch.length} · 전체 ${fq.q.length}개 중 ${qDoneN(fq)}개 확인`, `このセット ${done} / ${batch.length} · 全${fq.q.length}個中 ${qDoneN(fq)}個確認`)}</p>
-      <ol class="fx-list">${batch.map((it, k) => `<li class="${isDone('callsItem', it.id) ? 'ok' : ''}${k >= SHOW ? ' fx-more-i' : ''}"><span class="jp">${ruby(qLabel(it) || '')}</span><em class="fx-tag">${esc(tag(it))}</em></li>`).join('')}</ol>
-      ${batch.length > SHOW ? `<p class="fx-more">${L(`+ ${batch.length - SHOW}개 더`, `+ あと${batch.length - SHOW}個`)}</p>` : ''}
+      <ol class="fx-list">${batch.map(it => `<li class="${isDone('callsItem', it.id) ? 'ok' : ''}"><span class="jp">${ruby(qLabel(it) || '')}</span><em class="fx-tag">${esc(tag(it))}</em></li>`).join('')}</ol>
       <button class="fx-go">${go}</button>
     </section>`;
 }
@@ -2473,7 +2471,7 @@ function renderFixStudy(skip = false, pageOverride = null) {
   const exLines = x => [
     ...(x.ngEx.length ? [`<p class="ev-type">${x.firstEx ? L('처음 틀렸던 말', '最初に間違えた文') : L('고칠 말', '直したい文')} ${x.ngEx.length}${['bad', 'meh'].map(l => { const n = x.ngEx.filter(e => (e.lv || 'bad') === l).length; return n ? ` · ${LV[l][0]} ${LV[l][1]} ${n}` : ''; }).join('')}</p>`] : []),
     // 맨 위에 「무슨 말을 하려던 건지」(한국어) — 일본어만으론 맥락을 모른다(유저)
-    ...x.ngEx.map(e => exBox({ static: true, t: e.t, at: x.firstEx ? e.at : '', lv: e.lv || 'bad', lvTag: true, kr: e.kr, ...exNgParts(e), hideId: e.hideId })),
+    ...x.ngEx.map(e => exBox({ static: true, t: e.t, at: x.firstEx ? e.at : '', lv: e.lv || 'bad', lvTag: true, kr: e.kr, ...exNgParts(e), hideId: e.hideId, tools: selfClip(e) })),
     ...(x.okEx.length ? [`<p class="ev-type">${L('맞게 쓴 말', '正しく言えた文')} ${x.okEx.length}</p>`] : []),
     // 맞게 쓴 말: 문장 전체에 ✓를 달면 다른 어색한 곳까지 맞은 것처럼 보인다 → 맞은 부분만 초록, ✓는 그 부분에만
     ...x.okEx.map(e => { const [sent, fixed] = okPair(e.jp, e.hit, e.fixed); return exBox({ static: true, t: e.t, kr: e.kr, hideId: e.hideId,
@@ -2500,7 +2498,7 @@ function renderFixStudy(skip = false, pageOverride = null) {
       </div>
     </div>`;
   const item = (it, k) => `
-    <div class="fq-item" data-call-id="${esc(it.c ? it.c.id : '')}">
+    <div class="fq-item" data-call-id="${esc(it.c ? it.c.id : it.tier === 1 ? ((it.x.ngEx.find(e => e.cid) || {}).cid || '') : '')}">
       <p class="fq-tag t${it.tier}">${esc(qTag(it))}${it.c ? ` <button class="fq-open" data-go-call="${esc(it.c.id)}">${L('노트 →', 'ノート →')}</button>` : ''}</p>
       ${it.tier === 1 ? habit(it.x, k) : it.tier === 2 ? mustRule(it.c, it.m, it.i, { pos: k }) : detailCard(it, k)}
     </div>`;
@@ -2516,9 +2514,9 @@ function renderFixStudy(skip = false, pageOverride = null) {
       sec === 'missed' && d.cause ? `<span class="bd g">${nat(d.cause)}</span>` : '',
       (d.repeat_ts || []).length ? `<span class="bd">${L(`이번 통화 ${(d.repeat_ts || []).length + 1}번`, `今回の通話で${(d.repeat_ts || []).length + 1}回`)}</span>` : ''].join('');
     const box = sec === 'fix'
-      ? exBox({ static: true, t: d.t, kr: d.kr, lv: fixLv(d), lvTag: true, wrong: d.parts && d.parts.length ? partsMarked(d.said_full || d.said, d.parts) : ruby(d.said_full || d.said || ''), right: ruby(d.natural_full || d.natural || '') })
+      ? exBox({ static: true, t: d.t, kr: d.kr, lv: fixLv(d), lvTag: true, wrong: d.parts && d.parts.length ? partsMarked(d.said_full || d.said, d.parts) : ruby(d.said_full || d.said || ''), right: ruby(d.natural_full || d.natural || ''), tools: selfClip(d) })
       : sec === 'stuck'
-        ? exBox({ static: true, t: d.t, kr: d.wanted, krLabel: L('하려던 말', '言いたかったこと'), lv: fixLv(d), lvTag: true, wrong: d.parts && d.parts.length ? partsMarked(d.said_full || '', d.parts) : ruby(d.said_full || ''), right: ruby(d.natural_full || '') })
+        ? exBox({ static: true, t: d.t, kr: d.wanted, krLabel: L('하려던 말', '言いたかったこと'), lv: fixLv(d), lvTag: true, wrong: d.parts && d.parts.length ? partsMarked(d.said_full || '', d.parts) : ruby(d.said_full || ''), right: ruby(d.natural_full || ''), tools: selfClip(d) })
         : exBox({ static: true, t: d.t, kr: d.kr, right: `<span${d.clipKey ? ` data-clip="${esc(d.clipKey)}"` : ''}>${ruby(d.jp_full || '')}</span>`, rightMark: '👂',
             tools: d.clipKey ? `<button class="clip-btn" data-clip="${esc(d.clipKey)}" disabled>${L('▶ 듣기', '▶ 聞く')}</button>` : '' });
     const why = sec === 'fix' ? d.why : sec === 'missed' ? d.how : '';
@@ -2700,7 +2698,7 @@ const CARD = {
             ${f.repeat_ts && f.repeat_ts.length ? `<span class="tag rep">★ ${f.repeat_ts.length + 1}${L('번', '回')} · ${f.repeat_ts.map(esc).join(', ')}</span>` : ''}
             ${cardTools(c, 'fix', f)}</div>
           ${f.ctx ? `<p class="ctx">${L('상대: ', '相手: ')}${f.ctx.clipKey ? `<button class="clip-btn" data-clip="${esc(f.ctx.clipKey)}" disabled>▶</button>` : ''}<span class="jp"${f.ctx.clipKey ? ` data-clip="${esc(f.ctx.clipKey)}"` : ''}>${ruby(f.ctx.jp)}</span><span class="ctx-kr">${nat(f.ctx.kr || '')}</span></p>` : ''}
-          <p class="lbl">${L('내가 한 말', '自分が言ったこと')}</p>
+          <p class="lbl">${L('내가 한 말', '自分が言ったこと')} ${selfClip(f)}</p>
           <p class="jp said-full peek">${hl(f.said_full || f.said, f.said, 'bad')}</p>
           ${partsList(f.parts)}
           <p class="lbl">${L('자연스럽게', '自然な言い方')}</p>
@@ -2715,7 +2713,7 @@ const CARD = {
           ${s.ctx ? `<p class="ctx">${L('상대: ', '相手: ')}<span class="jp">${ruby(s.ctx.jp)}</span><span class="ctx-kr">${nat(s.ctx.kr || '')}</span></p>` : ''}
           <p class="lbl">${L('하려던 말', '言いたかったこと')}</p>
           <p class="wanted">${nat(s.wanted || '')}</p>
-          <p class="lbl">${L('실제로 한 말', '実際に言ったこと')}</p>
+          <p class="lbl">${L('실제로 한 말', '実際に言ったこと')} ${selfClip(s)}</p>
           <p class="jp said-full peek">${ruby(s.said_full || '')}</p>
           ${partsList(s.parts)}
           <p class="lbl">${L('이렇게 말하면 됨', 'こう言えばOK')}</p>
@@ -2986,7 +2984,7 @@ const mustRule = (c, m, i, { open = false, pos = i, streak = 0 } = {}) => {
         <div class="ev-group"><p class="ev-group-h">${L('내가 실제로 한 말', '実際に言った文')} · ${items.length}</p>
         ${items.map(([sec, it], k) => `
         ${k === 0 || items[k - 1][0] !== sec ? `<p class="ev-type">${MUST_LABEL[sec]} ${typeN(sec)}</p>` : ''}
-        ${exBox({ t: it.t, ...cardBox(sec, it), more: evMore(sec, it), tools: starBtn(callItemId(c, sec, it)),
+        ${exBox({ t: it.t, ...cardBox(sec, it), more: evMore(sec, it), tools: starBtn(callItemId(c, sec, it)) + selfClip(it),
           hideId: hideRefId(c, i, `${sec}:${callArr(c, sec).indexOf(it)}`) })}`).join('')}
         ${hiddenNote(c.must[i] ? hiddenRefs(c, i) : [])}
         ${m.more ? `<p class="rule-more">＋ ${nat(m.more)}</p>` : ''}</div>
