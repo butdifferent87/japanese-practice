@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>通話 · 통화</title>
+<style>
+  :root {
+    --bg: #FAFAF8;
+    --card: #FFFFFF;
+    --text: #1A1A1A;
+    --muted: #5C7066;
+    --accent: #007050;
+    --accent-soft: rgba(0,112,80,.10);
+    --danger: #C0392B;
+    --stroke: rgba(0,0,0,.08);
+    --shadow: 0 4px 14px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1A1A1A;
+      --card: #232323;
+      --text: #FDFCF8;
+      --muted: #9AA9A2;
+      --accent: #35B98D;
+      --accent-soft: rgba(53,185,141,.14);
+      --danger: #E8705F;
+      --stroke: rgba(255,255,255,.09);
+      --shadow: 0 4px 18px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }   /* 버튼의 display:block 이 hidden 을 이기지 않게 */
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.6;
+  }
+  main { max-width: 520px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.35rem; margin: 8px 0 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--stroke); border-radius: 14px;
+    box-shadow: var(--shadow); padding: 18px 16px; margin-bottom: 14px;
+  }
+  .muted { color: var(--muted); font-size: .92rem; }
+  .small { font-size: .85rem; }
+  button, .btn {
+    display: block; width: 100%; padding: 14px 16px; border-radius: 12px; border: 0;
+    font: inherit; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none;
+    background: var(--accent); color: #fff; margin-top: 10px;
+  }
+  button.ghost, .btn.ghost { background: var(--accent-soft); color: var(--accent); }
+  button.danger { background: var(--danger); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  input[type=text], input[type=password] {
+    width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--stroke);
+    background: var(--bg); color: var(--text); font: inherit;
+  }
+  label.check { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; cursor: pointer; }
+  label.check input { width: 22px; height: 22px; flex: none; margin-top: 2px; accent-color: var(--accent); }
+  .status { font-size: 1.05rem; font-weight: 700; }
+  .status .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); margin-right: 8px; }
+  .status.on .dot { background: var(--accent); }
+  .status.warn .dot { background: #D9A400; }
+  .timer { font-size: 2.4rem; font-variant-numeric: tabular-nums; font-weight: 700; text-align: center; margin: 8px 0; }
+  .rec { color: var(--danger); font-weight: 700; }
+  .link { word-break: break-all; font-family: ui-monospace, Menlo, monospace; font-size: .85rem; }
+  pre.cmd {
+    white-space: pre-wrap; word-break: break-all; background: var(--bg); border: 1px solid var(--stroke);
+    border-radius: 10px; padding: 10px; font-size: .8rem; margin: 8px 0 0;
+  }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .list-item { padding: 10px 0; border-top: 1px solid var(--stroke); }
+  .list-item:first-child { border-top: 0; }
+  #selfcheck-out { white-space: pre-wrap; padding: 16px; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<audio id="remote" autoplay playsinline></audio>
+<script>
+// 링크 하나로 하는 1:1 음성 통화 + 방장 기기에서 사람별(트랙별) 녹음.
+//
+//   call.html            방장(후유) 화면 — 방을 만들고 초대 링크를 보낸다. 한국어
+//   call.html#r=<방>     손님(친구) 화면 — 동의 → 통화. 일본어. 설치·가입 없음
+//   call.html#key=<열쇠> 방장 열쇠를 이 기기에 저장 (한 번만)
+//   call.html#selfcheck  배포 전 화면 점검 (deploy.sh 가 돌린다)
+//
+// 녹음은 방장 브라우저 안에서만 만들어진다. 내 마이크와 들려오는 상대 목소리를 **파일 두 개로 따로**
+// 녹음한다 — 같은 기기에서 같은 순간에 시작하니 두 파일의 시각이 저절로 맞고, 화자를 추정할 필요가 없다
+// (call_new.py --me/--them). 10초마다 기기 저장소(IndexedDB)에 적어 두므로 탭이 죽어도 남는다.
+// 서버(jp-call)는 두 브라우저가 서로를 찾을 때까지 쪽지만 전해 주고, 음성·녹음은 받지 않는다.
+
+const WORKER = 'https://jp-call.hikaro-world.workers.dev';
+// 연결 안내 서버 주소. 기본은 배포된 서버, ?api= 로 맥에서 띄운 시험 서버를 쓸 수 있다.
+function apiFor(search) {
+  const q = new URLSearchParams(search).get('api');
+  return q || WORKER;
+}
+const API = apiFor(location.search);
+
+const HOST_KEY = 'callHostKey';      // 방장 열쇠 (이 기기)
+const HOST_ROOMS = 'callHostRooms';  // 내가 만든 방들의 방장 토큰 {room: {hostToken, created}}
+const ROOM_TTL = 12 * 3600 * 1000;   // 서버와 같다
+
+const app = document.getElementById('app');
+const remoteEl = document.getElementById('remote');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ls = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+// ── 상태 ──────────────────────────────────────────────────────────────────
+const S = {
+  role: null,          // 'host' | 'guest'
+  room: null,
+  hostToken: null,
+  ice: null,           // iceServers
+  ws: null,
+  pc: null,
+  pendingIce: [],
+  local: null,         // 내 마이크 MediaStream
+  remote: null,
+  phase: 'idle',       // idle · waiting · connecting · connected · unstable · left · ended
+  connectedOnce: false,
+  startedAt: 0,
+  muted: false,
+  themName: '',
+  myName: '',
+  rec: null,           // 녹음기 (방장만)
+  recId: null,
+  files: null,         // 끝난 뒤 내려받을 파일 [{track, name, url, size}]
+  wake: null,
+  pingTimer: null,
+  tick: null,
+  retry: 0,
+};
+
+const send = obj => { if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(obj)); };
+
+// ── 녹음 파일 형식 ────────────────────────────────────────────────────────
+// 크롬은 webm(opus), 사파리는 mp4(aac). 둘 다 ffmpeg 가 읽으니 call_new.py 에 그대로 넣으면 된다.
+function pickMime() {
+  if (typeof MediaRecorder === 'undefined') return '';
+  for (const m of ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4;codecs=mp4a.40.2', 'audio/mp4']) {
+    try { if (MediaRecorder.isTypeSupported(m)) return m; } catch {}
+  }
+  return '';
+}
+const extFor = mime => (mime || '').includes('mp4') ? 'm4a' : 'webm';
+
+function stamp(t) {
+  const d = new Date(t), p = n => String(n).padStart(2, '0');
+  return { day: `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`, hm: `${p(d.getHours())}${p(d.getMinutes())}` };
+}
+function fileName(rec, track) {
+  const s = stamp(rec.started);
+  return `call-${s.day}-${s.hm}-${track}.${extFor(rec.mime)}`;
+}
+
+// ── 기기 저장소 (IndexedDB) ───────────────────────────────────────────────
+// 녹음 조각을 10초마다 여기 쌓는다. 탭이 죽거나 폰이 꺼져도 마지막 10초 전까지는 남는다.
+const DB = {
+  db: null,
+  open() {
+    if (this.db) return Promise.resolve(this.db);
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('jp-call', 1);
+      r.onupgradeneeded = () => {
+        const db = r.result;
+        db.createObjectStore('recs', { keyPath: 'id' });
+        db.createObjectStore('chunks', { keyPath: ['rec', 'track', 'seq'] });
+      };
+      r.onsuccess = () => { this.db = r.result; res(this.db); };
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async tx(store, mode, fn) {
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const t = db.transaction(store, mode);
+      const out = fn(t.objectStore(store));
+      t.oncomplete = () => res(out && 'result' in out ? out.result : undefined);
+      t.onerror = () => rej(t.error);
+    });
+  },
+  putRec(rec) { return this.tx('recs', 'readwrite', s => s.put(rec)); },
+  recs() { return this.tx('recs', 'readonly', s => s.getAll()); },
+  putChunk(c) { return this.tx('chunks', 'readwrite', s => s.put(c)); },
+  chunks(rec, track) {
+    return this.tx('chunks', 'readonly', s => s.getAll(IDBKeyRange.bound([rec, track, 0], [rec, track, Infinity])));
+  },
+  async remove(rec) {
+    await this.tx('chunks', 'readwrite', s => s.delete(IDBKeyRange.bound([rec, '', 0], [rec, '￿', Infinity])));
+    await this.tx('recs', 'readwrite', s => s.delete(rec));
+  },
+};
+
+async function filesFor(rec) {
+  const out = [];
+  for (const track of ['me', 'them']) {
+    const parts = (await DB.chunks(rec.id, track)).map(c => c.blob);
+    const blob = new Blob(parts, { type: (rec.mime || 'audio/webm').split(';')[0] });
+    out.push({ track, name: fileName(rec, track), url: URL.createObjectURL(blob), size: blob.size });
+  }
+  return out;
+}
+
+// ── 녹음기 (방장) ─────────────────────────────────────────────────────────
+// 소리를 녹음기에 바로 물리지 않고 「출구」(MediaStreamDestination)를 하나씩 두고 거기에 녹음한다.
+// 상대가 나갔다 다시 들어오면 상대 소리는 새 스트림으로 오는데, 출구는 그대로라 녹음 파일이
+// 끊기지 않는다 — 없던 동안은 무음으로 채워져 두 파일의 시각이 계속 맞는다.
+class TwoTrackRecorder {
+  // 오디오 엔진은 반드시 버튼을 누른 그 순간(마이크 허락을 기다리기 전)에 만든다. 늦게 만들면 브라우저가
+  // 엔진을 잠든 채로 두고, 그러면 녹음 파일이 처음부터 끝까지 무음이 된다.
+  constructor() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    this.ctx = new AC();
+    this.ctx.resume?.();
+    this.dest = { me: this.ctx.createMediaStreamDestination(), them: this.ctx.createMediaStreamDestination() };
+    this.themSrc = null;
+    this.recs = {};
+    this.mime = pickMime();
+  }
+  setLocal(stream) {
+    this.ctx.createMediaStreamSource(stream).connect(this.dest.me);
+  }
+  setRemote(stream) {
+    try { this.themSrc?.disconnect(); } catch {}
+    this.themSrc = this.ctx.createMediaStreamSource(stream);
+    this.themSrc.connect(this.dest.them);
+  }
+  start(recId) {
+    this.ctx.resume?.();
+    const opts = this.mime ? { mimeType: this.mime, audioBitsPerSecond: 64000 } : {};
+    for (const track of ['me', 'them']) {
+      const r = new MediaRecorder(this.dest[track].stream, opts);
+      let seq = 0;
+      r.ondataavailable = e => { if (e.data && e.data.size) DB.putChunk({ rec: recId, track, seq: seq++, blob: e.data }); };
+      this.recs[track] = r;
+    }
+    // 두 녹음기를 같은 순간에 켠다 — 두 파일의 0초가 같은 시각이 된다
+    this.recs.me.start(10000);
+    this.recs.them.start(10000);
+  }
+  stop() {
+    const done = Object.values(this.recs).map(r => new Promise(res => {
+      if (r.state === 'inactive') return res();
+      r.addEventListener('stop', () => setTimeout(res, 50), { once: true });   // 마지막 조각 저장 여유
+      r.stop();
+    }));
+    return Promise.all(done).then(() => this.ctx.close?.());
+  }
+}
+
+// ── 화면 문구 ─────────────────────────────────────────────────────────────
+// 방장 = 한국어, 손님 = 일본어. 손님 동의 문구는 TESTERS.md §5 에서 정한 두 줄 그대로.
+const T = {
+  host: {
+    waiting: '상대를 기다리는 중',
+    connecting: '연결하는 중…',
+    connected: '통화 중',
+    unstable: '연결이 불안정해요 — 다시 잇는 중',
+    left: '상대가 나갔어요 — 같은 링크로 다시 들어오면 이어져요',
+    mute: '음소거', unmute: '음소거 해제',
+    end: '통화 끝내기',
+    endConfirm: '통화를 끝낼까요? 녹음이 멈춥니다.',
+    rec: '● 녹음 중 — 나 / 상대 따로',
+    keepOpen: '통화 중에는 이 화면을 열어 두세요.',
+    soundOn: '상대 소리 켜기',
+  },
+  guest: {
+    waiting: '相手を待っています',
+    connecting: '接続しています…',
+    connected: '通話中',
+    unstable: '接続が不安定です — つなぎ直しています',
+    left: '相手が退出しました',
+    mute: 'ミュート', unmute: 'ミュート解除',
+    end: '通話を終える',
+    endConfirm: '通話を終了しますか？',
+    rec: '● 録音中',
+    keepOpen: '通話中はこの画面を開いたままにしてください。',
+    soundOn: '相手の音声をオンにする',
+  },
+};
+const t = k => T[S.role || 'host'][k];
+
+// ── 화면 ──────────────────────────────────────────────────────────────────
+function renderError(msg, sub) {
+  app.innerHTML = `<h1>${esc(msg)}</h1>${sub ? `<p class="muted">${esc(sub)}</p>` : ''}`;
+}
+
+function renderHostKey() {
+  document.documentElement.lang = 'ko';
+  app.innerHTML = `
+    <h1>통화 열쇠</h1>
+    <div class="card">
+      <p class="muted">방을 만들려면 이 기기에 열쇠를 한 번 넣어야 해요. 원본: <code>~/.config/hikaro/jp-call.env</code></p>
+      <input type="password" id="key" placeholder="HOST_KEY" autocomplete="off">
+      <button id="save">저장</button>
+    </div>`;
+  app.querySelector('#save').onclick = () => {
+    const k = app.querySelector('#key').value.trim();
+    if (k.length < 16) { alert('열쇠가 너무 짧아요'); return; }
+    ls.set(HOST_KEY, k);
+    renderHostLobby();
+  };
+}
+
+async function renderHostLobby() {
+  document.documentElement.lang = 'ko';
+  app.innerHTML = `
+    <h1>통화</h1>
+    <div class="card">
+      <p class="muted">방을 만들고 초대 링크를 LINE 등으로 보내세요. 상대는 링크만 누르면 들어와요(설치·가입 없음).
+      녹음은 이 기기에서 <b>나 / 상대 두 파일로 따로</b> 만들어져요.</p>
+      <button id="new">새 통화 만들기</button>
+    </div>
+    <div class="card" id="saved"><p class="muted small">저장된 녹음을 확인하는 중…</p></div>`;
+  app.querySelector('#new').onclick = createRoom;
+  renderSaved(app.querySelector('#saved'));
+}
+
+async function renderSaved(box) {
+  let recs = [];
+  try { recs = (await DB.recs()).sort((a, b) => b.started - a.started); } catch {}
+  if (!recs.length) { box.innerHTML = '<p class="muted small">이 기기에 저장된 녹음이 없어요.</p>'; return; }
+  box.innerHTML = '<p class="muted small">이 기기에 저장된 녹음 — 받은 뒤 지워 주세요.</p>' + recs.map(r => {
+    const s = stamp(r.started);
+    return `<div class="list-item" data-id="${esc(r.id)}">
+      <div>${esc(s.day)} ${esc(s.hm.slice(0, 2))}:${esc(s.hm.slice(2))} · ${esc(r.them || '상대')}${r.done ? '' : ' <span class="rec">(중간 저장분)</span>'}</div>
+      <div class="row"><button class="ghost get">받기</button><button class="ghost del">지우기</button></div>
+      <div class="out"></div></div>`;
+  }).join('');
+  box.querySelectorAll('.list-item').forEach(el => {
+    const rec = recs.find(r => r.id === el.dataset.id);
+    el.querySelector('.get').onclick = async () => { el.querySelector('.out').innerHTML = downloadsHtml(rec, await filesFor(rec)); };
+    el.querySelector('.del').onclick = async () => {
+      if (!confirm('이 녹음을 이 기기에서 지울까요? 되돌릴 수 없어요. 먼저 받았는지 확인하세요.')) return;
+      await DB.remove(rec.id);
+      renderSaved(box);
+    };
+  });
+}
+
+function downloadsHtml(rec, files) {
+  const mb = n => (n / 1048576).toFixed(1) + 'MB';
+  const me = files.find(f => f.track === 'me'), them = files.find(f => f.track === 'them');
+  const name = (rec.them || '상대').replace(/[^\p{L}\p{N}_-]/gu, '') || '상대';
+  const cmd = `python3 call_new.py ${stamp(rec.started).day} --me ~/Downloads/${me.name} --them ~/Downloads/${them.name} --them-name ${name}`;
+  return `
+    <a class="btn" download="${esc(me.name)}" href="${me.url}">내 목소리 받기 (${mb(me.size)})</a>
+    <a class="btn" download="${esc(them.name)}" href="${them.url}">상대 목소리 받기 (${mb(them.size)})</a>
+    <p class="muted small" style="margin-top:12px">받은 뒤 노트 재료 만들기 — 언어교환 통화면 끝에 <code>--exchange</code> 를 붙이세요:</p>
+    <pre class="cmd">${esc(cmd)}</pre>`;
+}
+
+function inviteUrl() {
+  return location.origin + location.pathname + location.search + '#r=' + S.room;
+}
+
+function renderCall() {
+  const host = S.role === 'host';
+  document.documentElement.lang = host ? 'ko' : 'ja';
+  const cls = S.phase === 'connected' ? 'on' : (S.phase === 'unstable' || S.phase === 'left') ? 'warn' : '';
+  const invite = host && !S.connectedOnce ? `
+    <div class="card">
+      <p class="muted small">이 링크를 상대에게 보내세요</p>
+      <p class="link" id="invite">${esc(inviteUrl())}</p>
+      <div class="row"><button class="ghost" id="copy">복사</button>${navigator.share ? '<button class="ghost" id="share">보내기</button>' : ''}</div>
+      ${/^(localhost|127\.)/.test(location.hostname) ? '<p class="rec small">⚠️ 맥 안 주소라 다른 기기에선 안 열려요 — 실제 통화는 공개 주소에서</p>' : ''}
+    </div>` : '';
+  app.innerHTML = `
+    ${invite}
+    <div class="card">
+      <div class="status ${cls}" id="status"><span class="dot"></span>${esc(t(S.phase) || '')}</div>
+      ${S.themName && host ? `<p class="muted small">상대: ${esc(S.themName)}</p>` : ''}
+      <div class="timer" id="timer">${fmtTime()}</div>
+      ${host && S.rec && S.recId ? `<p class="rec small">${esc(t('rec'))}</p>` : ''}
+      <button class="ghost" id="sound" hidden>${esc(t('soundOn'))}</button>
+      <button class="ghost" id="mute">${esc(S.muted ? t('unmute') : t('mute'))}</button>
+      <button class="danger" id="end">${esc(t('end'))}</button>
+      <p class="muted small" style="margin-top:12px">${esc(t('keepOpen'))}</p>
+    </div>`;
+  const copy = app.querySelector('#copy');
+  if (copy) copy.onclick = async () => {
+    try { await navigator.clipboard.writeText(inviteUrl()); copy.textContent = '복사됨'; } catch { prompt('복사하세요', inviteUrl()); }
+  };
+  const share = app.querySelector('#share');
+  if (share) share.onclick = () => navigator.share({ url: inviteUrl() }).catch(() => {});
+  app.querySelector('#mute').onclick = toggleMute;
+  app.querySelector('#end').onclick = () => { if (confirm(t('endConfirm'))) endCall(false); };
+  app.querySelector('#sound').onclick = () => { remoteEl.play().then(() => { app.querySelector('#sound').hidden = true; }).catch(() => {}); };
+  if (S.needSound) app.querySelector('#sound').hidden = false;
+}
+
+function fmtTime() {
+  if (!S.startedAt) return '00:00';
+  const s = Math.floor((Date.now() - S.startedAt) / 1000), p = n => String(n).padStart(2, '0');
+  return (s >= 3600 ? Math.floor(s / 3600) + ':' : '') + p(Math.floor(s / 60) % 60) + ':' + p(s % 60);
+}
+
+function setPhase(p) {
+  S.phase = p;
+  const el = document.getElementById('status');
+  if (!el) return renderCall();
+  el.className = 'status ' + (p === 'connected' ? 'on' : (p === 'unstable' || p === 'left') ? 'warn' : '');
+  el.innerHTML = `<span class="dot"></span>${esc(t(p) || '')}`;
+}
+
+function renderGuestConsent() {
+  document.documentElement.lang = 'ja';
+  app.innerHTML = `
+    <h1>通話に参加する</h1>
+    <div class="card">
+      <p class="muted">参加する前に、次の2つを確認してください。</p>
+      <label class="check"><input type="checkbox" class="consent" id="c1"><span>この通話を録音します。</span></label>
+      <label class="check"><input type="checkbox" class="consent" id="c2"><span>あなたの声の一部が学習ノートに入り、私が後から繰り返し聞きます。</span></label>
+    </div>
+    <div class="card">
+      <p class="muted small">お名前（ニックネームでも大丈夫です）</p>
+      <input type="text" id="name" maxlength="20" autocomplete="nickname">
+      <button id="join" disabled>通話に参加する</button>
+      <p class="muted small" style="margin-top:12px">マイクの使用を求められたら「許可」を押してください。<br>インストールや登録は必要ありません。</p>
+    </div>`;
+  const join = app.querySelector('#join');
+  const sync = () => { join.disabled = ![...app.querySelectorAll('.consent')].every(c => c.checked); };
+  app.querySelectorAll('.consent').forEach(c => c.onchange = sync);
+  join.onclick = () => {
+    S.myName = app.querySelector('#name').value.trim().slice(0, 20);
+    joinAsGuest();
+  };
+}
+
+function renderEnded() {
+  if (S.role === 'host') {
+    document.documentElement.lang = 'ko';
+    app.innerHTML = `
+      <h1>통화가 끝났어요 · ${fmtDur()}</h1>
+      <div class="card" id="dl">${S.files ? downloadsHtml(S.recMeta, S.files) : '<p class="muted">녹음 파일 정리하는 중…</p>'}</div>
+      <button class="ghost" id="lobby">처음으로</button>`;
+    app.querySelector('#lobby').onclick = () => { location.hash = ''; renderHostLobby(); };
+  } else {
+    document.documentElement.lang = 'ja';
+    app.innerHTML = `<h1>通話が終わりました</h1><div class="card"><p>ありがとうございました。この画面は閉じて大丈夫です。</p></div>`;
+  }
+}
+function fmtDur() { const s = S.endedAt && S.startedAt ? Math.floor((S.endedAt - S.startedAt) / 1000) : 0; return `${Math.floor(s / 60)}분 ${s % 60}초`; }
+
+// ── 흐름 ──────────────────────────────────────────────────────────────────
+async function getMic() {
+  // 에코 제거를 켠다 — 상대가 스피커로 들어도 내 소리가 상대 트랙에 섞여 들어오지 않게.
+  // 섞이면 call_new.py 가 내 말을 상대 말로 적는다 (이 노트에서 가장 치명적인 오류)
+  return navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    video: false,
+  });
+}
+
+async function fetchIce() {
+  const r = await fetch(`${API}/rooms/${S.room}/ice`, { method: 'POST' });
+  if (r.status === 404) throw Object.assign(new Error('expired'), { expired: true });
+  if (!r.ok) throw new Error('ice ' + r.status);
+  return (await r.json()).iceServers;
+}
+
+async function createRoom() {
+  const btn = app.querySelector('#new');
+  btn.disabled = true;
+  try {
+    S.role = 'host';
+    S.rec = new TwoTrackRecorder();              // 클릭 순간에 — 마이크 허락을 기다리기 전에
+    S.local = await getMic();
+    S.rec.setLocal(S.local);
+    const r = await fetch(`${API}/rooms`, { method: 'POST', headers: { 'x-host-key': ls.get(HOST_KEY, '') } });
+    if (r.status === 401) { ls.set(HOST_KEY, null); localStorage.removeItem(HOST_KEY); renderHostKey(); alert('열쇠가 맞지 않아요. 다시 넣어 주세요.'); return; }
+    if (!r.ok) throw new Error('방을 못 만들었어요 (' + r.status + ')');
+    const { room, hostToken } = await r.json();
+    const rooms = ls.get(HOST_ROOMS, {});
+    for (const k of Object.keys(rooms)) if (Date.now() - rooms[k].created > ROOM_TTL) delete rooms[k];
+    rooms[room] = { hostToken, created: Date.now() };
+    ls.set(HOST_ROOMS, rooms);
+    S.room = room; S.hostToken = hostToken;
+    history.replaceState(null, '', location.pathname + location.search + '#host/' + room);
+    await enterRoom();
+  } catch (e) {
+    btn.disabled = false;
+    alert(micError(e) || e.message);
+  }
+}
+
+// 방장이 새로고침했을 때 같은 방으로 돌아온다. 녹음은 새 파일로 다시 시작한다
+// (이전 부분은 기기 저장소에 「중간 저장분」으로 남아 있다).
+async function resumeHost(room) {
+  const info = ls.get(HOST_ROOMS, {})[room];
+  if (!info) return renderHostLobby();
+  S.role = 'host'; S.room = room; S.hostToken = info.hostToken;
+  app.innerHTML = `<h1>통화로 돌아가기</h1><div class="card"><p class="muted">새로고침되어 마이크를 다시 켜야 해요.</p><button id="go">다시 들어가기</button></div>`;
+  app.querySelector('#go').onclick = async () => {
+    try { S.rec = new TwoTrackRecorder(); S.local = await getMic(); S.rec.setLocal(S.local); await enterRoom(); }
+    catch (e) { alert(micError(e) || e.message); }
+  };
+}
+
+async function joinAsGuest() {
+  const btn = app.querySelector('#join');
+  btn.disabled = true;
+  try {
+    S.role = 'guest';
+    S.local = await getMic();
+    await enterRoom();
+  } catch (e) {
+    btn.disabled = false;
+    if (e.expired) return renderError('このリンクは期限切れです', '新しいリンクを送ってもらってください。');
+    alert(micError(e) || ('接続できませんでした: ' + e.message));
+  }
+}
+
+function micError(e) {
+  if (!e || !e.name) return '';
+  if (e.name === 'NotAllowedError') return S.role === 'guest'
+    ? 'マイクが許可されていません。ブラウザの設定でマイクを許可してから、もう一度お試しください。'
+    : '마이크가 허용되지 않았어요. 브라우저 설정에서 마이크를 허용한 뒤 다시 해 주세요.';
+  if (e.name === 'NotFoundError') return S.role === 'guest' ? 'マイクが見つかりません。' : '마이크를 찾을 수 없어요.';
+  return '';
+}
+
+async function enterRoom() {
+  try { S.ice = await fetchIce(); }
+  catch (e) {
+    if (e.expired) {
+      if (S.role === 'guest') return renderError('このリンクは期限切れです', '新しいリンクを送ってもらってください。');
+      return renderError('방이 만료됐어요', '새 통화를 만들어 주세요.');
+    }
+    throw e;
+  }
+  S.phase = 'waiting';
+  renderCall();
+  connectWS();
+  keepAwake();
+  addEventListener('beforeunload', warnLeave);
+  S.tick = setInterval(() => { const el = document.getElementById('timer'); if (el) el.textContent = fmtTime(); }, 1000);
+}
+
+function warnLeave(e) { if (S.phase !== 'ended') { e.preventDefault(); e.returnValue = ''; } }
+
+// 폰 화면이 꺼지면 브라우저가 마이크를 놓는다. 통화 중엔 화면을 켜 둔다(지원하는 브라우저만).
+async function keepAwake() {
+  try { S.wake = await navigator.wakeLock?.request('screen'); } catch {}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && S.phase !== 'idle' && S.phase !== 'ended') keepAwake();
+});
+
+function connectWS() {
+  const u = API.replace(/^http/, 'ws') + `/rooms/${S.room}/ws?role=${S.role}` +
+    (S.role === 'host' ? '&t=' + encodeURIComponent(S.hostToken) : '');
+  const ws = new WebSocket(u);
+  S.ws = ws;
+  ws.onopen = () => { S.retry = 0; };
+  ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch { return; } onSignal(m); };
+  ws.onclose = ev => {
+    if (S.ws !== ws || S.phase === 'ended') return;
+    if (ev.code === 4000) return renderError(S.role === 'guest' ? '別の画面で開かれました' : '다른 창에서 열렸어요');
+    if (ev.code === 4001) return renderError(S.role === 'guest' ? 'このリンクは期限切れです' : '방이 만료됐어요');
+    // 연결 안내 서버와의 줄이 끊긴 것뿐 — 통화(음성)는 그대로일 수 있다. 조용히 다시 잇는다.
+    setTimeout(() => { if (S.ws === ws && S.phase !== 'ended') connectWS(); }, Math.min(1000 * 2 ** S.retry++, 15000));
+  };
+  clearInterval(S.pingTimer);
+  S.pingTimer = setInterval(() => send({ type: 'ping', id: Date.now() }), 25000);   // 폰 망이 조용한 연결을 끊지 않게
+}
+
+function onSignal(m) {
+  switch (m.type) {
+    // 통화를 거는 쪽은 항상 손님이다 — 둘이 동시에 걸어 엉키지 않게. 방장은 필요할 때 「다시 걸어 줘」(renego)만 보낸다.
+    // 연결 안내 서버와의 줄만 끊겼다 다시 붙은 경우엔 음성이 살아 있으니 건드리지 않는다.
+    case 'hello':
+      if (!m.peer) break;
+      if (S.role === 'guest') { if (!live()) startOffer(); else sendMeta(); }
+      else if (!live()) { setPhase('connecting'); send({ type: 'renego' }); }
+      break;
+    case 'peer-joined':
+      if (S.role === 'guest') { if (!live()) startOffer(); else sendMeta(); }
+      else if (!live()) setPhase('connecting');
+      break;
+    case 'renego': if (S.role === 'guest') startOffer(); break;
+    case 'peer-left':
+      if (S.phase !== 'ended') setPhase(S.connectedOnce ? 'left' : 'waiting');
+      break;
+    case 'offer': if (S.role === 'host') onOffer(m.sdp); break;
+    case 'answer': if (S.pc && S.role === 'guest') S.pc.setRemoteDescription(m.sdp).then(flushIce).catch(() => {}); break;
+    case 'ice': addIce(m.c); break;
+    case 'meta':
+      if (S.role === 'host') {
+        S.themName = String(m.name || '').slice(0, 20);
+        if (S.recMeta) { S.recMeta.them = S.themName; DB.putRec(S.recMeta); }
+        renderCall();
+      }
+      break;
+    case 'bye': if (S.phase !== 'ended') endCall(true); break;
+  }
+}
+
+const live = () => !!S.pc && S.pc.connectionState === 'connected';
+const sendMeta = () => { if (S.role === 'guest') send({ type: 'meta', name: S.myName }); };
+
+function newPC() {
+  try { S.pc?.close(); } catch {}
+  const pc = new RTCPeerConnection({ iceServers: S.ice || [] });
+  S.pc = pc;
+  S.pendingIce = [];
+  S.local.getTracks().forEach(tr => pc.addTrack(tr, S.local));
+  pc.onicecandidate = e => { if (e.candidate) send({ type: 'ice', c: e.candidate.toJSON() }); };
+  pc.ontrack = e => onRemote(e.streams[0] || new MediaStream([e.track]));
+  pc.onconnectionstatechange = () => { if (S.pc === pc) onConnState(pc.connectionState); };
+  return pc;
+}
+
+async function startOffer() {
+  const pc = newPC();
+  sendMeta();
+  setPhase(S.connectedOnce ? 'unstable' : 'connecting');
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  send({ type: 'offer', sdp: pc.localDescription.toJSON() });
+}
+
+async function onOffer(sdp) {
+  const pc = newPC();
+  await pc.setRemoteDescription(sdp);
+  flushIce();
+  const ans = await pc.createAnswer();
+  await pc.setLocalDescription(ans);
+  send({ type: 'answer', sdp: pc.localDescription.toJSON() });
+}
+
+function addIce(c) {
+  if (!S.pc || !c) return;
+  if (!S.pc.remoteDescription) { S.pendingIce.push(c); return; }
+  S.pc.addIceCandidate(c).catch(() => {});
+}
+function flushIce() {
+  const q = S.pendingIce; S.pendingIce = [];
+  q.forEach(c => S.pc.addIceCandidate(c).catch(() => {}));
+}
+
+function onRemote(stream) {
+  S.remote = stream;
+  // 크롬은 상대 소리를 오디오 요소에 물려 둬야 녹음 쪽(WebAudio)에도 소리가 흐른다. 어차피 들어야 하니 같이 한다.
+  remoteEl.srcObject = stream;
+  remoteEl.play().catch(() => { S.needSound = true; const b = document.getElementById('sound'); if (b) b.hidden = false; });
+  if (S.rec) S.rec.setRemote(stream);
+}
+
+function onConnState(st) {
+  if (st === 'connected') {
+    S.retry = 0;
+    if (!S.connectedOnce) {
+      S.connectedOnce = true;
+      S.startedAt = Date.now();
+      if (S.role === 'host') startRecording();
+      S.phase = 'connected';
+      renderCall();                       // 초대 링크 칸을 걷어낸다
+    } else setPhase('connected');
+  } else if (st === 'disconnected') {
+    setPhase('unstable');
+  } else if (st === 'failed') {
+    setPhase('unstable');
+    if (S.role === 'guest') setTimeout(() => { if (S.pc?.connectionState === 'failed' && S.phase !== 'ended') startOffer(); }, 1000);
+  }
+}
+
+function startRecording() {
+  if (!S.rec || S.recId) return;
+  S.recId = `${S.room}-${Date.now()}`;
+  S.recMeta = { id: S.recId, room: S.room, started: Date.now(), them: S.themName, mime: S.rec.mime, done: false };
+  DB.putRec(S.recMeta);
+  S.rec.start(S.recId);
+}
+
+function toggleMute() {
+  S.muted = !S.muted;
+  S.local?.getAudioTracks().forEach(tr => { tr.enabled = !S.muted; });
+  const b = document.getElementById('mute');
+  if (b) b.textContent = S.muted ? t('unmute') : t('mute');
+}
+
+async function endCall(byPeer) {
+  if (S.phase === 'ended') return;
+  if (!byPeer) send({ type: 'bye' });
+  S.phase = 'ended';
+  S.endedAt = Date.now();
+  clearInterval(S.tick); clearInterval(S.pingTimer);
+  removeEventListener('beforeunload', warnLeave);
+  try { S.pc?.close(); } catch {}
+  try { S.ws?.close(); } catch {}
+  try { S.wake?.release(); } catch {}
+  renderEnded();
+  if (S.role === 'host') {
+    if (S.rec) await S.rec.stop();
+    S.local?.getTracks().forEach(tr => tr.stop());
+    if (S.recMeta) {
+      S.recMeta.done = true;
+      await DB.putRec(S.recMeta);
+      S.files = await filesFor(S.recMeta);
+    }
+    const dl = document.getElementById('dl');
+    if (dl) dl.innerHTML = S.files ? downloadsHtml(S.recMeta, S.files) : '<p class="muted">연결된 적이 없어서 녹음이 없어요.</p>';
+  } else {
+    S.local?.getTracks().forEach(tr => tr.stop());
+  }
+}
+
+// ── 배포 전 화면 점검 (#selfcheck) ─────────────────────────────────────────
+// deploy.sh 가 머리 없는 크롬으로 이 주소를 열어 결과 칸(<pre id="selfcheck-out">)만 읽는다.
+// 마이크·네트워크 없이 각 화면을 가짜 상태로 그려 보고 규칙을 검사한다.
+async function runSelfCheck() {
+  const out = [], fail = [];
+  const ok = (cond, msg) => { (cond ? out : fail).push((cond ? '✓ ' : '✗ ') + msg); };
+  const noOverflow = name => ok(document.documentElement.scrollWidth <= innerWidth + 1, `${name}: 가로로 넘치지 않는다`);
+  const reset = () => Object.assign(S, { role: null, room: 'AbCdEfGhIjKl', phase: 'idle', connectedOnce: false, startedAt: 0, themName: '', rec: null, recId: null, files: null, recMeta: null, needSound: false });
+
+  // 손님 동의 화면 — 두 줄 동의가 다 있어야 참가할 수 있다 (TESTERS.md §5: 하나만 받으면 나중에 방어가 안 된다)
+  reset(); S.role = 'guest';
+  renderGuestConsent();
+  const boxes = [...app.querySelectorAll('.consent')], join = app.querySelector('#join');
+  ok(boxes.length === 2, '동의 화면: 체크 두 개');
+  ok(/録音/.test(app.textContent) && /繰り返し/.test(app.textContent), '동의 화면: 「녹음」과 「반복 재생」 두 줄');
+  ok(join && join.disabled, '동의 화면: 처음엔 참가 버튼이 잠겨 있다');
+  boxes[0].checked = true; boxes[0].onchange();
+  ok(join.disabled, '동의 화면: 하나만 체크하면 여전히 잠겨 있다');
+  boxes[1].checked = true; boxes[1].onchange();
+  ok(!join.disabled, '동의 화면: 둘 다 체크하면 열린다');
+  ok(document.documentElement.lang === 'ja', '동의 화면: 일본어');
+  noOverflow('동의 화면');
+
+  // 손님 통화 화면
+  reset(); S.role = 'guest'; S.phase = 'connected'; S.connectedOnce = true; S.startedAt = Date.now() - 65000;
+  renderCall();
+  ok(!app.querySelector('#invite'), '손님 통화 화면: 초대 링크가 안 보인다');
+  ok(app.querySelector('#end') && app.querySelector('#mute'), '손님 통화 화면: 끝내기·음소거');
+  ok(/通話中/.test(app.textContent), '손님 통화 화면: 일본어 상태 표시');
+  ok(getComputedStyle(app.querySelector('#sound')).display === 'none', '손님 통화 화면: 「소리 켜기」는 소리가 막혔을 때만 보인다');
+  noOverflow('손님 통화 화면');
+
+  // 방장 대기 화면 — 초대 링크
+  reset(); S.role = 'host'; S.phase = 'waiting';
+  renderCall();
+  const inv = app.querySelector('#invite');
+  ok(inv && inv.textContent.endsWith('#r=AbCdEfGhIjKl'), '방장 대기 화면: 초대 링크가 #r=<방> 으로 끝난다');
+  ok(document.documentElement.lang === 'ko', '방장 화면: 한국어');
+  noOverflow('방장 대기 화면');
+
+  // 방장 통화 화면 — 녹음 표시
+  reset(); S.role = 'host'; S.phase = 'connected'; S.connectedOnce = true; S.startedAt = Date.now(); S.rec = {}; S.recId = 'x'; S.themName = 'ミキ';
+  renderCall();
+  ok(!app.querySelector('#invite'), '방장 통화 화면: 연결되면 초대 링크를 걷는다');
+  ok(app.querySelector('.rec') && /따로/.test(app.querySelector('.rec').textContent), '방장 통화 화면: 「나 / 상대 따로」 녹음 표시');
+  noOverflow('방장 통화 화면');
+
+  // 방장 끝 화면 — 두 파일 + call_new.py 명령
+  reset(); S.role = 'host'; S.phase = 'ended'; S.startedAt = Date.now() - 600000; S.endedAt = Date.now();
+  S.recMeta = { id: 'x', started: new Date(2026, 9, 8, 15, 30).getTime(), them: 'ミキ', mime: 'audio/webm;codecs=opus' };
+  S.files = [{ track: 'me', name: fileName(S.recMeta, 'me'), url: '#', size: 1 }, { track: 'them', name: fileName(S.recMeta, 'them'), url: '#', size: 1 }];
+  renderEnded();
+  const links = [...app.querySelectorAll('a[download]')].map(a => a.getAttribute('download'));
+  ok(links.length === 2 && links[0] === 'call-2026-10-08-1530-me.webm' && links[1] === 'call-2026-10-08-1530-them.webm', '방장 끝 화면: 나 / 상대 두 파일');
+  const cmd = app.querySelector('pre.cmd')?.textContent || '';
+  ok(/^python3 call_new\.py 2026-10-08 --me \S+-me\.webm --them \S+-them\.webm --them-name ミキ$/.test(cmd), '방장 끝 화면: call_new.py --me/--them 명령');
+  noOverflow('방장 끝 화면');
+
+  // 손님 끝 화면
+  reset(); S.role = 'guest'; renderEnded();
+  ok(/ありがとうございました/.test(app.textContent), '손님 끝 화면: 인사');
+
+  // 그 밖
+  ok(apiFor('') === WORKER, '연결 안내 서버: 기본은 배포된 jp-call');
+  ok(apiFor('?api=http://127.0.0.1:8787') === 'http://127.0.0.1:8787', '연결 안내 서버: ?api= 로 시험 서버');
+  ok(extFor('audio/mp4') === 'm4a' && extFor('audio/webm;codecs=opus') === 'webm', '녹음 파일 확장자');
+  ok(typeof pickMime() === 'string', '녹음 형식 고르기');
+
+  const pass = !fail.length;
+  document.body.innerHTML = `<pre id="selfcheck-out">${pass ? 'SELFCHECK-PASS' : 'SELFCHECK-FAIL'}\n${esc(fail.concat(out).join('\n'))}</pre>`;
+  document.title = pass ? 'SELFCHECK-PASS' : 'SELFCHECK-FAIL';
+}
+
+// ── 시작 ──────────────────────────────────────────────────────────────────
+function boot() {
+  const h = location.hash.slice(1);
+  if (h === 'selfcheck') return runSelfCheck();
+  if (h.startsWith('key=')) {
+    ls.set(HOST_KEY, decodeURIComponent(h.slice(4)));
+    history.replaceState(null, '', location.pathname + location.search);
+    return renderHostLobby();
+  }
+  if (h.startsWith('r=')) {
+    S.room = h.slice(2);
+    if (!/^[A-Za-z0-9_-]{12}$/.test(S.room)) return renderError('リンクが正しくありません', 'もう一度送ってもらってください。');
+    S.role = 'guest';
+    return renderGuestConsent();
+  }
+  if (!ls.get(HOST_KEY, '')) return renderHostKey();
+  if (h.startsWith('host/')) return resumeHost(h.slice(5));
+  renderHostLobby();
+}
+boot();
+</script>
+</body>
+</html>
