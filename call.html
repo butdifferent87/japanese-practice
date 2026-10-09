@@ -45,6 +45,7 @@
     background: var(--card); border: 1px solid var(--stroke); border-radius: 14px;
     box-shadow: var(--shadow); padding: 18px 16px; margin-bottom: 14px;
   }
+  .warn-card { border: 2px solid var(--danger); }
   .muted { color: var(--muted); font-size: .92rem; }
   .small { font-size: .85rem; }
   button, .btn {
@@ -360,6 +361,15 @@ function downloadsHtml(rec, files) {
     <pre class="cmd">${esc(cmd)}</pre>`;
 }
 
+// 회화 노트 목록의 「📞 새 통화 시작」은 #new 로 들어와 방을 바로 만든다(유저 2026-10-09: 「새 통화 시작」을 누르면
+// 또 「새 통화 만들기」가 나와 두 번 누르게 된다). 그 경우 오디오 엔진을 만든 순간이 「누른 순간」이 아니라
+// 브라우저가 엔진을 재워 둘 수 있다 → 화면을 누를 때마다 깨우고(초대 링크 복사·공유를 반드시 누르게 된다),
+// 그래도 잠들어 있으면 통화 화면에 「한 번 눌러 녹음 켜기」를 크게 띄운다(잠든 채 녹음하면 파일이 무음이 된다).
+const wakeAudio = () => { const c = S.rec && S.rec.ctx; if (c && c.state !== 'running') c.resume?.().then(() => { if (S.phase && S.phase !== 'ended') renderCall(); }).catch(() => {}); };
+addEventListener('pointerdown', wakeAudio, true);
+addEventListener('keydown', wakeAudio, true);
+const audioAsleep = () => !!(S.rec && S.rec.ctx && S.rec.ctx.state !== 'running');
+
 function inviteUrl() {
   return location.origin + location.pathname + location.search + '#r=' + S.room;
 }
@@ -375,8 +385,14 @@ function renderCall() {
       <div class="row"><button class="ghost" id="copy">복사</button>${navigator.share ? '<button class="ghost" id="share">보내기</button>' : ''}</div>
       ${/^(localhost|127\.)/.test(location.hostname) ? '<p class="rec small">⚠️ 맥 안 주소라 다른 기기에선 안 열려요 — 실제 통화는 공개 주소에서</p>' : ''}
     </div>` : '';
+  const asleep = host && audioAsleep() ? `
+    <div class="card warn-card">
+      <p><b>🎙 화면을 한 번 눌러 주세요</b></p>
+      <p class="muted small">녹음 엔진이 아직 잠들어 있어요. 이대로면 녹음 파일이 무음이 돼요.</p>
+      <button id="wake">녹음 켜기</button>
+    </div>` : '';
   app.innerHTML = `
-    ${invite}
+    ${asleep}${invite}
     <div class="card">
       <div class="status ${cls}" id="status"><span class="dot"></span>${esc(t(S.phase) || '')}</div>
       ${S.themName && host ? `<p class="muted small">상대: ${esc(S.themName)}</p>` : ''}
@@ -397,6 +413,8 @@ function renderCall() {
   app.querySelector('#end').onclick = () => { if (confirm(t('endConfirm'))) endCall(false); };
   app.querySelector('#sound').onclick = () => { remoteEl.play().then(() => { app.querySelector('#sound').hidden = true; }).catch(() => {}); };
   if (S.needSound) app.querySelector('#sound').hidden = false;
+  const wk = app.querySelector('#wake');
+  if (wk) wk.onclick = wakeAudio;
 }
 
 function fmtTime() {
@@ -471,7 +489,7 @@ async function fetchIce() {
 
 async function createRoom() {
   const btn = app.querySelector('#new');
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
   try {
     S.role = 'host';
     S.rec = new TwoTrackRecorder();              // 클릭 순간에 — 마이크 허락을 기다리기 전에
@@ -489,7 +507,7 @@ async function createRoom() {
     history.replaceState(null, '', location.pathname + location.search + '#host/' + room);
     await enterRoom();
   } catch (e) {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
     alert(micError(e) || e.message);
   }
 }
@@ -806,6 +824,11 @@ function boot() {
   }
   if (!ls.get(HOST_KEY, '')) return renderHostKey();
   if (h.startsWith('host/')) return resumeHost(h.slice(5));
+  if (h === 'new') {
+    history.replaceState(null, '', location.pathname + location.search);
+    renderHostLobby();
+    return createRoom();
+  }
   renderHostLobby();
 }
 boot();
