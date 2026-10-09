@@ -344,6 +344,9 @@
      예전엔 오른쪽 290px 칸이라 부가 기능처럼 보였다 — 모든 통화의 공통 실수를 고치는 게 이 코너의 주인공이다.
      통화 목록은 「원본·복습」 역할로 내려 한 줄씩. 맥·폰 순서가 같다. */
   .calls-wrap { max-width: 860px; margin: 0 auto; }
+  .call-entry { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 13px 16px; border-radius: 14px;
+                background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; box-shadow: var(--shadow); }
+  .call-entry .ic { font-size: 1.3rem; line-height: 1; }
   .list-h { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
   .list-h small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 6px; }
   .call-day { font-size: 13.5px; font-weight: 800; color: var(--accent); white-space: nowrap; }
@@ -2631,13 +2634,25 @@ function callDay(d) { const t = new Date(d + 'T00:00:00'); return isNaN(t) ? d :
 // 대화 상대별 칩. 이름은 노트 JSON 의 partner(나만 보는 목록이라 실명 OK — 공개본은 잠금본 안에만 있다).
 // 「지금 고칠 것」은 상대와 상관없이 전체 통화 기준이다(버릇은 상대가 바뀌어도 나온다).
 const PARTNER_KEY = 'callsPartner';
+// 「📞 새 통화 시작」 — 통화 페이지(call.html)로 가는 입구. 방을 만들 수 있는 사람(후유)에게만 보인다:
+// 그 브라우저에 방장 열쇠가 저장돼 있거나(call.html 이 같은 주소에 저장한다), 맥에서 여는 주소일 때.
+// 테스터 페이지(u/<슬러그>/)를 여는 친구에겐 열쇠가 없으니 안 보인다 — 눌러 봐야 방을 못 만든다.
+// 맥 주소에서 눌러도 공개 주소로 연다. 친구에게 보내는 초대 링크가 공개 주소여야 하기 때문이다.
+const CALL_PAGE = 'https://butdifferent87.github.io/japanese-practice/call.html';
+function showCallEntry(host, hasKey) { return hasKey || /^(localhost|127\.0\.0\.1)$/.test(host); }
+function callEntryHtml() {
+  let key = false;
+  try { key = !!JSON.parse(localStorage.getItem('callHostKey') || 'null'); } catch {}
+  if (!showCallEntry(location.hostname, key)) return '';
+  return `<a class="call-entry" href="${CALL_PAGE}" target="_blank" rel="noopener"><span class="ic">📞</span>${L('새 통화 시작', '通話を始める')}</a>`;
+}
 function renderCallsList() {
   const starN = callStarTotal();
   const names = [...new Set(CALLS.map(c => c.partner).filter(Boolean))];
   let who = localStorage.getItem(PARTNER_KEY) || '';
   if (who && !names.includes(who)) who = '';
   const shown = who ? CALLS.filter(c => c.partner === who) : CALLS;
-  app.innerHTML = `<div class="calls-wrap">${fixEntryHtml()}${starN ? `<button class="starall side" data-go-star>${L('⭐ 회화 노트 별표', '⭐ ★したカード')} <b>${starN}</b><small>${L('⭐ 모아보기에서 보기', '「まとめて見る」で見る')}</small></button>` : ''}<div class="calls-main">
+  app.innerHTML = `<div class="calls-wrap">${callEntryHtml()}${fixEntryHtml()}${starN ? `<button class="starall side" data-go-star>${L('⭐ 회화 노트 별표', '⭐ ★したカード')} <b>${starN}</b><small>${L('⭐ 모아보기에서 보기', '「まとめて見る」で見る')}</small></button>` : ''}<div class="calls-main">
     <p class="list-h">${L('💬 통화 노트', '💬 通話ノート')} <small>${L(`${shown.length}개 · 최근 통화가 위`, `${shown.length}件 · 新しい順`)}</small></p>
     ${names.length > 1 ? `<div class="pchips">${[['', L('전체', 'すべて'), CALLS.length], ...names.map(n => [n, n, CALLS.filter(c => c.partner === n).length])]
       .map(([k, l, n]) => `<button data-partner="${esc(k)}" class="${k === who ? 'on' : ''}">${esc(l)} <b>${n}</b></button>`).join('')}</div>` : ''}` +
@@ -3594,6 +3609,11 @@ function runSelfCheck() {
       renderCallsList(); common('목록');
       if (app.querySelectorAll('.calls-main .item').length !== CALLS.filter(c => !localStorage.getItem('callsPartner') || c.partner === localStorage.getItem('callsPartner')).length) fail('목록', '통화 카드 수가 다르다');
       if (!app.querySelector('.fx-entry')) fail('목록', '「지금 고칠 것」 입구가 없다');
+      // 통화 입구 — 맥 주소(이 점검이 도는 곳)에선 보이고 공개 call.html 로 간다. 열쇠 없는 공개 주소(테스터)에선 안 보인다
+      const ce = app.querySelector('.call-entry');
+      if (!ce || ce.getAttribute('href') !== CALL_PAGE) fail('목록', '「📞 새 통화 시작」 입구가 없거나 주소가 다르다');
+      if (showCallEntry('butdifferent87.github.io', false)) fail('목록', '열쇠 없는 공개 주소(테스터 페이지)에 통화 입구가 보인다');
+      if (!showCallEntry('butdifferent87.github.io', true)) fail('목록', '열쇠 있는 기기에 통화 입구가 안 보인다');
     });
     for (const c of CALLS) step(`노트 ${c.id}`, () => {
       renderCallDetail(c); common(`노트 ${c.id}`);
