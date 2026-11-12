@@ -386,6 +386,23 @@
   .calls-main .item.call-line:hover { transform: none; background: var(--accent-soft); }
   .call-line h2 { flex: 1; min-width: 0; margin: 0; font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .call-line .dur { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  /* 🧳 여행 대본 (2026-11-12 유저: 가게에서 점원이 한 말도 스크립트로). 점원 말이 주인공 — 크게, 내 말은 작고 옅게 */
+  .tr-scene { margin: 18px 0 4px; padding: 0 4px; font-size: 13px; font-weight: 800; color: var(--accent); }
+  .tr-scene:first-child { margin-top: 4px; }
+  /* 왼쪽 좁은 칸 = 누가(위)·시각(아래), 오른쪽 넓은 칸 = 일본어(위)·뜻(아래). 폰에서 일본어 폭을 최대로 */
+  .tr-line { display: grid; grid-template-columns: 40px 1fr; gap: 0 8px; align-items: baseline; padding: 9px 6px;
+    border-bottom: 1px solid var(--stroke); border-radius: 8px; }
+  .tr-who { grid-column: 1; grid-row: 1; font-size: 11.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+  .tr-line .jp { grid-column: 2; grid-row: 1; }
+  .tr-line .tsx { grid-column: 1; grid-row: 2; font-size: 10px !important; }
+  .tr-line.sp-staff .tr-who { color: var(--accent); }
+  .tr-line .jp { margin: 0; font-size: 16px; line-height: 1.9; }
+  .tr-line.sp-me .jp, .tr-line.sp-other .jp { font-size: 14px; color: var(--muted); }
+  .tr-line .kr { grid-column: 2; grid-row: 2; margin: 1px 0 0; font-size: 13px; }
+  .tr-line .tsx { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .tr-line.playable { cursor: pointer; }
+  .tr-line.playable:hover { background: var(--accent-soft); }
+  .tr-line.playing { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
   .starall.side { margin: 0 0 18px; text-align: left; border-radius: 14px; }
   .starall.side small { display: inline; margin-left: 8px; font-size: 11.5px; font-weight: 500; color: var(--muted); }
   .fx-entry { background: var(--card); border: 2px solid #C8463C; border-radius: 16px; padding: 16px 18px; margin: 0 0 18px;
@@ -631,6 +648,7 @@
   <nav class="corners">
     <button id="cornerYt" data-ja="YouTubeノート">유튜브 노트</button>
     <button id="cornerCalls" hidden data-ja="会話ノート">회화 노트</button>
+    <button id="cornerTrips" hidden data-ja="旅の会話">여행</button>
     <button id="cornerNhk" hidden data-ja="NHK リスニング">NHK 듣기</button>
     <button id="cornerHard" data-ja="⭐ まとめて見る">⭐ 모아보기</button>
     <button id="cornerVocab" data-ja="単語帳">단어장</button>
@@ -2259,7 +2277,7 @@ function callPlayer(k) {
 
 async function prepareCallAudio(c) {
   // 📥 가져다 쓸 표현 + ✏️ 카드 속 「상대:」 줄
-  const clips = [...c.steal, ...(c.missed || []), ...c.fixes.map(f => f.ctx).filter(Boolean), ...c.fixes, ...(c.stuck || [])].filter(s => s.clipKey);
+  const clips = [...c.steal, ...(c.missed || []), ...c.fixes.map(f => f.ctx).filter(Boolean), ...c.fixes, ...(c.stuck || []), ...(c.script || [])].filter(s => s.clipKey);
   if (!clips.length) return false;
   if (typeof CALLS_DATA !== 'undefined') {           // 로컬: 파일이 옆에 있다
     clips.forEach(s => { callClipUrls[`${c.id}/${s.clipKey}`] = s.clip; });
@@ -2283,9 +2301,9 @@ function wireCallClips(c, root = app) {
   const play = (el) => {
     const k = `${c.id}/${el.dataset.clip}`;
     if (!callClipUrls[k]) return;
-    const card = el.closest('.fix');
+    const card = el.closest('.fix, .tr-line');   // 🧳 대본 줄도 재생 중 표시
     stopCallAudio();
-    app.querySelectorAll('.fix.playing').forEach(x => x.classList.remove('playing'));
+    app.querySelectorAll('.fix.playing, .tr-line.playing').forEach(x => x.classList.remove('playing'));
     card?.classList.add('playing');
     const a = callPlayer(k);
     a.currentTime = 0;
@@ -2700,15 +2718,50 @@ function callEntryHtml() {
   // #new = 통화 화면에서 「새 통화 만들기」를 또 누르지 않게 방을 바로 만든다(유저 2026-10-09: 하나로 통합)
   return `<a class="call-entry" href="${CALL_PAGE}#new" target="_blank" rel="noopener"><span class="ic">📞</span>${L('새 통화 시작', '通話を始める')}</a>`;
 }
+// 🧳 여행 노트(kind:"trip") — 가게·호텔에서 점원과 한 대화. 회화 노트 목록이 아니라 「여행」 코너에 뜬다(2026-11-12 유저).
+// 카드·필수·carry 는 회화 노트와 같은 데이터라 「지금 고칠 것」·⭐ 모아보기에는 그대로 들어간다.
+const isTrip = c => c && c.kind === 'trip';
+const talkCalls = () => (CALLS || []).filter(c => !isTrip(c));
+const tripCalls = () => (CALLS || []).filter(isTrip);
+const TRIP_WHO = { staff: L('점원', '店員'), me: L('나', '自分'), other: L('주변', 'まわり') };
+const scriptLines = c => (c.script || []).filter(l => l.jp);
+
+function renderTripsList() {
+  const trips = tripCalls();
+  app.innerHTML = `<div class="calls-wrap"><div class="calls-main">
+    <p class="list-h">${L('🧳 여행 대화', '🧳 旅の会話')} <small>${L(`${trips.length}개 · 최근이 위`, `${trips.length}件 · 新しい順`)}</small></p>
+    <p class="hint">${L('가게·호텔·식당에서 녹음한 대화. 열면 점원이 한 말이 대본으로 나오고, 줄을 누르면 그 부분 소리가 나온다.', 'お店・ホテル・食堂で録音した会話。開くと店員さんの言葉が台本で出て、行を押すとその部分の音声が流れます。')}</p>` +
+    (trips.length ? '<div class="grid">' + trips.map(c => `
+    <div class="item plain call-line${isDone('calls', c.id) ? ' done' : ''}" data-id="${esc(c.id)}">
+      <span class="call-day">${esc(shortDate(c.date))}</span>
+      <h2>${nat(c.title)}</h2>
+      <span class="dur">${L(`대본 ${scriptLines(c).length}줄`, `台本${scriptLines(c).length}行`)} · ${nat(c.duration)}</span>${checkBtn('calls', c.id)}
+    </div>`).join('') + '</div>'
+    : `<p class="empty">${L('아직 여행 대화 없음.', 'まだ旅の会話がありません。')}</p>`) + `</div></div>`;
+  app.querySelectorAll('.item').forEach(el => el.onclick = () => { location.hash = 'trips/' + el.dataset.id; });
+  wireChecks(app, () => updateCount('trips'));
+}
+
+// 🧾 대본 칸 — 장면 줄 + 대사 줄. 내 말은 고치지 않은 그대로(고친 말은 카드에 있다)
+const scriptHtml = c => (c.script || []).map((l, i) => l.scene
+  ? `<p class="tr-scene">📍 ${nat(l.scene)}</p>`
+  : `<div class="tr-line sp-${esc(l.sp || 'staff')}"${l.clipKey ? ` data-clip="${esc(l.clipKey)}"` : ''}>
+      <span class="tr-who">${TRIP_WHO[l.sp] || TRIP_WHO.staff}</span>
+      <p class="jp nat">${ruby(l.jp)}</p>
+      <span class="tsx">${esc(l.t || '')}</span>
+      ${l.kr ? `<p class="kr">${nat(l.kr)}</p>` : ''}
+    </div>`).join('');
+
 function renderCallsList() {
   const starN = callStarTotal();
-  const names = [...new Set(CALLS.map(c => c.partner).filter(Boolean))];
+  const TALK = talkCalls();
+  const names = [...new Set(TALK.map(c => c.partner).filter(Boolean))];
   let who = localStorage.getItem(PARTNER_KEY) || '';
   if (who && !names.includes(who)) who = '';
-  const shown = who ? CALLS.filter(c => c.partner === who) : CALLS;
+  const shown = who ? TALK.filter(c => c.partner === who) : TALK;
   app.innerHTML = `<div class="calls-wrap">${callEntryHtml()}${fixEntryHtml()}${starN ? `<button class="starall side" data-go-star>${L('⭐ 회화 노트 별표', '⭐ ★したカード')} <b>${starN}</b><small>${L('⭐ 모아보기에서 보기', '「まとめて見る」で見る')}</small></button>` : ''}<div class="calls-main">
     <p class="list-h">${L('💬 통화 노트', '💬 通話ノート')} <small>${L(`${shown.length}개 · 최근 통화가 위`, `${shown.length}件 · 新しい順`)}</small></p>
-    ${names.length > 1 ? `<div class="pchips">${[['', L('전체', 'すべて'), CALLS.length], ...names.map(n => [n, n, CALLS.filter(c => c.partner === n).length])]
+    ${names.length > 1 ? `<div class="pchips">${[['', L('전체', 'すべて'), TALK.length], ...names.map(n => [n, n, TALK.filter(c => c.partner === n).length])]
       .map(([k, l, n]) => `<button data-partner="${esc(k)}" class="${k === who ? 'on' : ''}">${esc(l)} <b>${n}</b></button>`).join('')}</div>` : ''}` +
     (shown.length ? '<div class="grid">' + shown.map(c => `
     <div class="item plain call-line${isDone('calls', c.id) ? ' done' : ''}" data-id="${esc(c.id)}">
@@ -3122,7 +3175,9 @@ function renderCallDetail(c) {
     star: () => `${L('⭐ 별표', '⭐ 見返す')} ${callStars(c).length}`,
     must: () => `${L('🔴 필수', '🔴 最優先')} ${mustDoneN()}/${must.length}`,
   };
+  const trip = isTrip(c);
   const secs = [
+    ...(trip ? [['sec-script', L(`🧾 대본 ${scriptLines(c).length}줄`, `🧾 台本 ${scriptLines(c).length}行`)]] : []),
     ...(must.length ? [['sec-must', secLabel.must()]] : []),
     ['sec-star', secLabel.star()],
     ['sec-fix', secLabel.fix()],
@@ -3149,12 +3204,16 @@ function renderCallDetail(c) {
       ${markLegend()}</details>
       ${(({ idx, streak }) => idx.map((i, pos) => mustRule(c, must[i], i, { pos, streak: streak[i] || 0 })).join(''))(mustOrder(c))}` : '';
   app.innerHTML = `
-    <button class="back">${L('← 회화 목록', '← 会話リスト')}</button>
+    <button class="back">${trip ? L('← 여행 목록', '← 旅の会話リスト') : L('← 회화 목록', '← 会話リスト')}</button>
     <div class="detail">
       <h2>${nat(c.title)}</h2>
       <div class="meta"><span>${esc(c.date)}</span><span>${nat(c.duration)}</span><span>${nat(c.with || '')}</span></div>
       <div class="filt">${FILT.map(([k]) => `<button data-filt="${k}"></button>`).join('')}</div>
       <div class="jump">${secs.map(([id, label]) => `<button data-go="${id}">${label}</button>`).join('')}</div>
+${trip ? `
+      <h3 class="call-sec" id="sec-script">${L('🧾 대본', '🧾 台本')}</h3>
+      <p class="hint">${L('녹음 속 대화 그대로. 점원 말은 크게, 내 말은 작게(고치지 않은 원래 말). 줄을 누르면 그 부분이 나온다. 「번역 가리기」를 켜면 듣기 연습.', '録音の会話そのまま。店員さんの言葉は大きく、自分の言葉は小さく（直す前のまま）。行を押すとその部分が流れます。「和訳」をOFFにするとリスニング練習に。')}</p>
+      <div class="tr-script">${scriptHtml(c)}</div>` : ''}
 ${mustHtml}
 
       <h3 class="call-sec" id="sec-star">${L('⭐ 별표', '⭐ 見返す')}</h3>
@@ -3212,7 +3271,7 @@ ${mustHtml}
   wireCards(app);
   wireDoneBar('calls', c.id, L('이 회화 복습 완료로 표시', 'この会話の復習を完了にする'));
   wireCallClips(c);
-  app.querySelector('.back').onclick = () => { location.hash = 'calls'; };
+  app.querySelector('.back').onclick = () => { location.hash = trip ? 'trips' : 'calls'; };
   // ---- 칩 = 탭 ----
   // 칩을 누르면 스크롤로 이동하지 않고 그 칸만 보여준다(유저: "스크롤이 느려서 답답"). 칸 나누기는 그린 뒤에
   // DOM 으로 한다 — 제목(h3.call-sec[id])마다 새 칸, 그 앞의 🔁 반복 실수는 ✏️ 칸에 붙인다.
@@ -3245,6 +3304,8 @@ ${mustHtml}
   const showTab = (id) => {
     if (id === 'sec-star') drawStars();
     for (const [k, p] of Object.entries(panels)) p.hidden = k !== id;
+    // 대본 줄엔 ✓가 없다 — 안 한 것/확인한 것 필터가 뜻이 없다 (.filt 가 display:flex 라 hidden 속성으론 안 숨는다)
+    detail.querySelector('.filt').style.display = id === 'sec-script' ? 'none' : '';
     refreshFilter();
     jump.querySelectorAll('[data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === id));
     localStorage.setItem('callsTab', id);
@@ -3330,7 +3391,8 @@ ${mustHtml}
   refreshMust();
   // 필수가 있는 노트는 늘 필수 칸에서 시작한다(「먼저 보여야」가 이 기능의 목적)
   const saved = localStorage.getItem('callsTab');
-  showTab(must.length ? 'sec-must' : panels[saved] ? saved : 'sec-fix');
+  // 여행 노트는 대본에서 시작한다 — 점원 말을 보러 들어온 것이니까
+  showTab(trip && panels['sec-script'] ? 'sec-script' : must.length ? 'sec-must' : panels[saved] && saved !== 'sec-script' ? saved : 'sec-fix');
 }
 
 // ⭐ 별표 모음 — 모든 통화에서 별표한 카드를 통화별로 모아 본다.
@@ -3361,6 +3423,7 @@ function renderCallsStar() {
 const cornerBtns = {
   yt: document.getElementById('cornerYt'),
   calls: document.getElementById('cornerCalls'),
+  trips: document.getElementById('cornerTrips'),
   nhk: document.getElementById('cornerNhk'),
   vocab: document.getElementById('cornerVocab'),
   hard: document.getElementById('cornerHard'),
@@ -3368,6 +3431,11 @@ const cornerBtns = {
 cornerBtns.nhk.hidden = NHK.length === 0;
 cornerBtns.yt.hidden = VIDEOS.length === 0;   // 테스터 페이지엔 유튜브 노트가 없다
 cornerBtns.calls.hidden = !(CALLS || CALLS_LOCKED);
+// 여행 코너 — 잠금본 안에 여행 노트가 있는지는 풀기 전엔 모른다. 잠긴 동안엔 보이고(누르면 암호 화면),
+// 풀린 뒤 여행 노트가 하나도 없으면(테스터 페이지 등) 숨긴다.
+const syncTripsBtn = () => { cornerBtns.trips.hidden = CALLS ? !tripCalls().length : !CALLS_LOCKED || !VIDEOS.length; };
+syncTripsBtn();
+cornerBtns.trips.onclick = () => { location.hash = 'trips'; };
 // 「반복」은 유튜브·NHK 구간 재생용이다. 둘 다 없는 배포(테스터 페이지)에선 누를 데가 없어 숨긴다.
 document.getElementById('toggleLoop').hidden = !VIDEOS.length && !NHK.length;
 cornerBtns.calls.onclick = () => { location.hash = 'calls'; };
@@ -3395,7 +3463,9 @@ function updateCount(name) {
     // 늘 0이던 「복습」 대신 오늘 ✓한 양(유저 확정 목업). 묶음 번호·뺀 예문 기록은 세지 않는다
     const t0 = new Date(); t0.setHours(0, 0, 0, 0);
     const today = Object.entries(doneOf('callsItem')).filter(([k, v]) => v >= +t0 && !/^(hide|fixpage):/.test(k)).length;
-    el.textContent = CALLS ? L(`오늘 ✓ ${today}개 · ${CALLS.length}통화`, `今日 ✓ ${today}個 · 通話${CALLS.length}件`) : L('잠김', 'ロック中');
+    el.textContent = CALLS ? L(`오늘 ✓ ${today}개 · ${talkCalls().length}통화`, `今日 ✓ ${today}個 · 通話${talkCalls().length}件`) : L('잠김', 'ロック中');
+  } else if (name === 'trips') {
+    el.textContent = CALLS ? L(`${tripCalls().length}개 · 완료 ${doneCount('calls', tripCalls().map(c => c.id))}`, `${tripCalls().length}件 · 完了 ${doneCount('calls', tripCalls().map(c => c.id))}`) : L('잠김', 'ロック中');
   } else if (name === 'nhk') {
     const done = doneCount('nhk', NHK.map(i => i.group));
     el.textContent = `${NHK.length}꼭지 · 완료 ${done}`;
@@ -3685,7 +3755,8 @@ function runSelfCheck() {
   else {
     step('목록', () => {
       renderCallsList(); common('목록');
-      if (app.querySelectorAll('.calls-main .item').length !== CALLS.filter(c => !localStorage.getItem('callsPartner') || c.partner === localStorage.getItem('callsPartner')).length) fail('목록', '통화 카드 수가 다르다');
+      if (app.querySelectorAll('.calls-main .item').length !== talkCalls().filter(c => !localStorage.getItem('callsPartner') || c.partner === localStorage.getItem('callsPartner')).length) fail('목록', '통화 카드 수가 다르다');
+      if ([...app.querySelectorAll('.calls-main .item')].some(el => isTrip(CALLS.find(c => c.id === el.dataset.id)))) fail('목록', '여행 노트가 회화 목록에 섞여 있다');
       if (!app.querySelector('.fx-entry')) fail('목록', '「지금 고칠 것」 입구가 없다');
       // 통화 입구 — 맥 주소(이 점검이 도는 곳)에선 보이고 공개 call.html 로 간다. 열쇠 없는 공개 주소(테스터)에선 안 보인다
       const ce = app.querySelector('.call-entry');
@@ -3697,6 +3768,18 @@ function runSelfCheck() {
       renderCallDetail(c); common(`노트 ${c.id}`);
       if (c.must && app.querySelectorAll('.rule').length !== c.must.length) fail(`노트 ${c.id}`, `필수 규칙 ${c.must.length}개인데 ${app.querySelectorAll('.rule').length}개만 보인다`);
       (c.must || []).forEach((m, i) => effRefs(c, i).forEach(r => { if (!refItem(c, r)[1]) fail(`노트 ${c.id}`, `필수 ${i + 1}의 증거 ${r} 가 없다`); }));
+      if (isTrip(c)) {
+        const lines = app.querySelectorAll('.tr-line');
+        if (!scriptLines(c).length) fail(`여행 ${c.id}`, '대본(script)이 비어 있다');
+        if (lines.length !== scriptLines(c).length) fail(`여행 ${c.id}`, `대본 ${scriptLines(c).length}줄인데 ${lines.length}줄만 보인다`);
+        lines.forEach((ln, k) => { if (!ln.querySelector('.kr')) fail(`여행 ${c.id} 대본 ${k + 1}줄`, '한국어 뜻이 없다'); });
+        (c.script || []).forEach((l, k) => { if (l.jp && !['staff', 'me', 'other'].includes(l.sp)) fail(`여행 ${c.id} 대본 ${k + 1}`, `화자 sp="${l.sp}" 가 staff·me·other 가 아니다`); });
+        if (app.querySelector('.call-panel:not([hidden]) .tr-script') == null) fail(`여행 ${c.id}`, '대본 칸에서 시작하지 않는다');
+      }
+    });
+    step('여행 목록', () => {
+      renderTripsList(); common('여행 목록');
+      if (app.querySelectorAll('.calls-main .item').length !== tripCalls().length) fail('여행 목록', '여행 노트 수가 다르다');
     });
     step('지금 고칠 것', () => {
       renderFixStudy(); common('지금 고칠 것');
@@ -3737,7 +3820,7 @@ function route() {
     if (!h) {
       const last = localStorage.getItem('corner');
       if (last === 'nhk' && NHK.length) { location.hash = 'nhk'; return; }
-      if (last === 'calls' && (CALLS || CALLS_LOCKED)) { location.hash = 'calls'; return; }
+      if ((last === 'calls' || last === 'trips') && (CALLS || CALLS_LOCKED)) { location.hash = last; return; }
       if (last === 'hard' || last === 'vocab') { location.hash = last; return; }
       // 유튜브 노트가 없는 배포(테스터 페이지)는 회화 노트가 유일한 내용이다.
       if (!VIDEOS.length && (CALLS || CALLS_LOCKED)) { location.hash = 'calls'; return; }
@@ -3770,11 +3853,26 @@ function route() {
     if (!CALLS && !CALLS_LOCKED) { location.hash = ''; return; }
     setCorner('calls');
     if (!CALLS) { renderCallsLock(); scrollTo(0, 0); return; }
+    syncTripsBtn();
     document.body.dataset.tgt = tgtLang(CALLS.find(x => x.id === h.slice(6)) || CALLS[0]);   // 줄간격 CSS(body[data-tgt=ko])용
     if (h === 'calls/star') { try { localStorage.setItem(STAR_CHIP_KEY, 'calls'); } catch {} location.hash = 'hard'; return; }
     if (h === 'calls/fix') { renderFixStudy(); scrollTo(0, 0); return; }
     const c = h.startsWith('calls/') ? CALLS.find(x => x.id === h.slice(6)) : null;
+    if (isTrip(c)) { location.hash = 'trips/' + c.id; return; }   // 「지금 고칠 것」에서 여행 노트로 건너온 경우
     c ? renderCallDetail(c) : renderCallsList();
+    scrollTo(0, 0);
+    return;
+  }
+
+  // 🧳 여행 — 회화 노트와 같은 잠금본 안에 있다(kind:"trip")
+  if (h === 'trips' || h.startsWith('trips/')) {
+    if (!CALLS && !CALLS_LOCKED) { location.hash = ''; return; }
+    setCorner('trips');
+    if (!CALLS) { renderCallsLock(); scrollTo(0, 0); return; }
+    syncTripsBtn();
+    const c = h.startsWith('trips/') ? tripCalls().find(x => x.id === h.slice(6)) : null;
+    document.body.dataset.tgt = tgtLang(c || CALLS[0]);
+    c ? renderCallDetail(c) : renderTripsList();
     scrollTo(0, 0);
     return;
   }
@@ -3843,7 +3941,8 @@ if (!CALLS && CALLS_LOCKED && localStorage.getItem(CALLS_PASS_KEY)) {
   decryptCalls(CALLS_LOCKED, localStorage.getItem(CALLS_PASS_KEY)).then(d => {
     CALLS = d;
     CALLS_PASS = localStorage.getItem(CALLS_PASS_KEY);
-    if (location.hash.startsWith('#calls')) route(); else updateCount(localStorage.getItem('corner') || 'yt');
+    syncTripsBtn();
+    if (location.hash.startsWith('#calls') || location.hash.startsWith('#trips')) route(); else updateCount(localStorage.getItem('corner') || 'yt');
   }).catch(() => localStorage.removeItem(CALLS_PASS_KEY));
 }
 
